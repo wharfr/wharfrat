@@ -12,10 +12,33 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/term"
+	flags "github.com/jessevdk/go-flags"
 	"golang.org/x/net/context"
 )
 
+type Options struct {
+	Server  bool   `short:"s" long:"server" hidden:"true"`
+	Verbose bool   `short:"v" long:"verbose"`
+	Image   string `short:"i" long:"image"`
+}
+
 func main() {
+	opts := Options{}
+
+	parser := flags.NewParser(&opts, flags.Default|flags.PassAfterNonOption)
+
+	args, err := parser.Parse()
+	if flagErr, ok := err.(*flags.Error); ok && flagErr.Type == flags.ErrHelp {
+		os.Exit(0)
+	} else if err != nil {
+		os.Exit(1)
+	}
+	log.Printf("Args: %#v, Opts: %#v", args, opts)
+
+	if opts.Server {
+		select {}
+	}
+
 	c, err := client.NewEnvClient()
 	if err != nil {
 		log.Fatalf("Failed to create docker client: %s", err)
@@ -34,17 +57,29 @@ func main() {
 		log.Fatalf("Failed to get terminal size: %s", err)
 	}
 
+	self, err := os.Readlink("/proc/self/exe")
+	if err != nil {
+		log.Fatalf("Failed to get self: %s", err)
+	}
+
 	config := &container.Config{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
 		Tty:          true,
 		OpenStdin:    true,
-		Cmd:          os.Args[1:],
+		Cmd:          args,
 		Image:        "centos:6.8",
 	}
 	hostConfig := &container.HostConfig{
 		//AutoRemove: true,
+		Binds: []string{
+			"/home:/home",
+			"/etc/passwd:/etc/passwd:ro",
+			"/etc/shadow:/etc/shadow:ro",
+			"/etc/group:/etc/group:ro",
+			self + ":/wr:ro",
+		},
 		ConsoleSize: [2]uint{uint(size.Width), uint(size.Height)},
 	}
 	networkingConfig := &network.NetworkingConfig{}
@@ -96,7 +131,7 @@ func main() {
 		if (size.Height == 0 && size.Width == 0) || err != nil {
 			return
 		}
-		err = c.ContainerResize(ctx, cid, types.ResizeOptions{
+		c.ContainerResize(ctx, cid, types.ResizeOptions{
 			Height: uint(size.Height),
 			Width:  uint(size.Width),
 		})
