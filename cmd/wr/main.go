@@ -4,6 +4,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -21,6 +23,17 @@ func main() {
 
 	ctx := context.Background()
 
+	inFd, inTerm := term.GetFdInfo(os.Stdin)
+	log.Printf("IN: fd=%d, term=%v", inFd, inTerm)
+
+	outFd, outTerm := term.GetFdInfo(os.Stdout)
+	log.Printf("OUT: fd=%d, term=%v", outFd, outTerm)
+
+	size, err := term.GetWinsize(inFd)
+	if err != nil {
+		log.Fatalf("Failed to get terminal size: %s", err)
+	}
+
 	config := &container.Config{
 		AttachStdin:  true,
 		AttachStdout: true,
@@ -31,7 +44,8 @@ func main() {
 		Image:        "centos:6.8",
 	}
 	hostConfig := &container.HostConfig{
-	//AutoRemove: true,
+		//AutoRemove: true,
+		ConsoleSize: [2]uint{uint(size.Width), uint(size.Height)},
 	}
 	networkingConfig := &network.NetworkingConfig{}
 
@@ -57,12 +71,6 @@ func main() {
 
 	defer attach.Close()
 
-	inFd, inTerm := term.GetFdInfo(os.Stdin)
-	log.Printf("IN: fd=%d, term=%v", inFd, inTerm)
-
-	outFd, outTerm := term.GetFdInfo(os.Stdout)
-	log.Printf("OUT: fd=%d, term=%v", outFd, outTerm)
-
 	inState, err := term.SetRawTerminal(inFd)
 	if err != nil {
 		log.Fatalf("Failed to set raw terminal mode: %s", err)
@@ -82,6 +90,27 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to start container: %s", err)
 	}
+
+	resizeTty := func() {
+		size, err := term.GetWinsize(inFd)
+		if (size.Height == 0 && size.Width == 0) || err != nil {
+			return
+		}
+		err = c.ContainerResize(ctx, cid, types.ResizeOptions{
+			Height: uint(size.Height),
+			Width:  uint(size.Width),
+		})
+	}
+
+	resizeTty()
+
+	go func() {
+		sigchan := make(chan os.Signal, 1)
+		signal.Notify(sigchan, syscall.SIGWINCH)
+		for range sigchan {
+			resizeTty()
+		}
+	}()
 
 	wait, errChan := c.ContainerWait(ctx, cid, container.WaitConditionNextExit)
 	select {
