@@ -1,0 +1,7 @@
+image = "default"
+
+[images.alpha]
+image = "alpha"
+
+[images.beta]
+image = "other/beta:0.1"

@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/burntsushi/toml"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
@@ -20,6 +21,16 @@ type Options struct {
 	Server  bool   `short:"s" long:"server" hidden:"true"`
 	Verbose bool   `short:"v" long:"verbose"`
 	Image   string `short:"i" long:"image"`
+}
+
+type Image struct {
+	Image   string
+	Volumes []string
+}
+
+type Project struct {
+	Image
+	Images map[string]Image
 }
 
 func main() {
@@ -38,6 +49,13 @@ func main() {
 	if opts.Server {
 		select {}
 	}
+
+	var project Project
+	_, err = toml.DecodeFile("project.toml", &project)
+	if err != nil {
+		log.Fatalf("Failed to parse project file: %s", err)
+	}
+	log.Printf("Project: %#v", project)
 
 	c, err := client.NewEnvClient()
 	if err != nil {
