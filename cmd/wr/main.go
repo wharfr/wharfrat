@@ -20,17 +20,17 @@ import (
 type Options struct {
 	Server  bool   `short:"s" long:"server" hidden:"true"`
 	Verbose bool   `short:"v" long:"verbose"`
-	Image   string `short:"i" long:"image"`
+	Crate   string `short:"c" long:"crate"`
 }
 
-type Image struct {
+type Crate struct {
 	Image   string
 	Volumes []string
 }
 
 type Project struct {
-	Image
-	Images map[string]Image
+	Crate
+	Crates map[string]Crate
 }
 
 func main() {
@@ -56,6 +56,16 @@ func main() {
 		log.Fatalf("Failed to parse project file: %s", err)
 	}
 	log.Printf("Project: %#v", project)
+
+	if opts.Crate == "" {
+		log.Printf("Crate: <default>, Image: %s", project.Crate.Image)
+	} else {
+		crate, ok := project.Crates[opts.Crate]
+		if !ok {
+			log.Fatalf("Unknown crate: %s", opts.Crate)
+		}
+		log.Printf("Crate: %s, Image: %s", opts.Crate, crate.Image)
+	}
 
 	c, err := client.NewEnvClient()
 	if err != nil {
