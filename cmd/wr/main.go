@@ -51,20 +51,28 @@ func main() {
 		select {}
 	}
 
-	project, err := config.Locate(".")
+	project, err := config.LocateProject(".")
 	if err != nil {
 		log.Fatalf("Failed to parse project file: %s", err)
 	}
 	log.Printf("Project: %#v", project)
 
-	if opts.Crate == "" {
+	crateName := opts.Crate
+	if crateName == "" {
+		crateName, err = config.LocateCrate(".")
+		if err != nil && err != config.NotFound {
+			log.Fatalf("Failed to parse crate file: %s", err)
+		}
+	}
+
+	if crateName == "" {
 		log.Printf("Crate: <default>, Image: %s", project.Crate.Image)
 	} else {
-		crate, ok := project.Crates[opts.Crate]
+		crate, ok := project.Crates[crateName]
 		if !ok {
-			log.Fatalf("Unknown crate: %s", opts.Crate)
+			log.Fatalf("Unknown crate: %s", crateName)
 		}
-		log.Printf("Crate: %s, Image: %s", opts.Crate, crate.Image)
+		log.Printf("Crate: %s, Image: %s", crateName, crate.Image)
 	}
 
 	c, err := client.NewEnvClient()
