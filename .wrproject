@@ -1,0 +1,7 @@
+image = "default"
+
+[crates.alpha]
+image = "alpha"
+
+[crates.beta]
+image = "other/beta:0.1"

@@ -7,7 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/burntsushi/toml"
+	"git.qur.me/qur/wharf_rat/lib/config"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
@@ -50,8 +51,7 @@ func main() {
 		select {}
 	}
 
-	var project Project
-	_, err = toml.DecodeFile("project.toml", &project)
+	project, err := config.Locate(".")
 	if err != nil {
 		log.Fatalf("Failed to parse project file: %s", err)
 	}
