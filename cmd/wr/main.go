@@ -24,16 +24,6 @@ type Options struct {
 	Crate   string `short:"c" long:"crate"`
 }
 
-type Crate struct {
-	Image   string
-	Volumes []string
-}
-
-type Project struct {
-	Crate
-	Crates map[string]Crate
-}
-
 func main() {
 	opts := Options{}
 
@@ -51,29 +41,11 @@ func main() {
 		select {}
 	}
 
-	project, err := config.LocateProject(".")
+	crate, err := config.GetCrate(".", opts.Crate)
 	if err != nil {
-		log.Fatalf("Failed to parse project file: %s", err)
+		log.Fatalf("Config error: %s", err)
 	}
-	log.Printf("Project: %#v", project)
-
-	crateName := opts.Crate
-	if crateName == "" {
-		crateName, err = config.LocateCrate(".")
-		if err != nil && err != config.NotFound {
-			log.Fatalf("Failed to parse crate file: %s", err)
-		}
-	}
-
-	if crateName == "" {
-		log.Printf("Crate: <default>, Image: %s", project.Crate.Image)
-	} else {
-		crate, ok := project.Crates[crateName]
-		if !ok {
-			log.Fatalf("Unknown crate: %s", crateName)
-		}
-		log.Printf("Crate: %s, Image: %s", crateName, crate.Image)
-	}
+	log.Printf("Crate: %#v", crate)
 
 	c, err := client.NewEnvClient()
 	if err != nil {

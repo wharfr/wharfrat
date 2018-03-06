@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -85,4 +86,33 @@ func LocateCrate(start string) (string, error) {
 		return "", err
 	}
 	return string(bytes.TrimSpace(data)), nil
+}
+
+func GetCrate(start, name string) (*Crate, error) {
+	project, err := LocateProject(start)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse project file: %s", err)
+	}
+	log.Printf("Project: %#v", project)
+
+	crateName := name
+	if crateName == "" {
+		crateName, err = LocateCrate(start)
+		if err != nil && err != NotFound {
+			return nil, fmt.Errorf("Failed to parse crate file: %s", err)
+		}
+	}
+
+	if crateName == "" {
+		log.Printf("Crate: <default>, Image: %s", project.Crate.Image)
+		return &project.Crate, nil
+	}
+
+	crate, ok := project.Crates[crateName]
+	if !ok {
+		log.Fatalf("Unknown crate: %s", crateName)
+	}
+	log.Printf("Crate: %s, Image: %s", crateName, crate.Image)
+
+	return &crate, nil
 }
