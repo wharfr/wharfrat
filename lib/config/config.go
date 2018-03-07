@@ -17,8 +17,8 @@ type Crate struct {
 }
 
 type Project struct {
-	Crate
-	Crates map[string]Crate
+	Default string
+	Crates  map[string]Crate
 }
 
 const NotFound = notFound("Not Found")
@@ -104,13 +104,16 @@ func GetCrate(start, name string) (*Crate, error) {
 	}
 
 	if crateName == "" {
-		log.Printf("Crate: <default>, Image: %s", project.Crate.Image)
-		return &project.Crate, nil
+		crateName = project.Default
+	}
+
+	if crateName == "" {
+		crateName = "default"
 	}
 
 	crate, ok := project.Crates[crateName]
 	if !ok {
-		log.Fatalf("Unknown crate: %s", crateName)
+		return nil, fmt.Errorf("Unknown crate: %s", crateName)
 	}
 	log.Printf("Crate: %s, Image: %s", crateName, crate.Image)
 
