@@ -2,6 +2,9 @@ package config
 
 import (
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,13 +15,15 @@ import (
 )
 
 type Crate struct {
-	Image   string
-	Volumes []string
+	Image       string
+	Volumes     []string
+	projectPath string
 }
 
 type Project struct {
 	Default string
 	Crates  map[string]Crate
+	path    string
 }
 
 const NotFound = notFound("Not Found")
@@ -42,6 +47,7 @@ func parse(path string) (*Project, error) {
 	}
 	log.Printf("Project File: %s", path)
 	log.Printf("Project: %#v", project)
+	project.path = path
 	return &project, nil
 }
 
@@ -115,7 +121,22 @@ func GetCrate(start, name string) (*Crate, error) {
 	if !ok {
 		return nil, fmt.Errorf("Unknown crate: %s", crateName)
 	}
+	crate.projectPath = project.path
 	log.Printf("Crate: %s, Image: %s", crateName, crate.Image)
 
 	return &crate, nil
+}
+
+func (c *Crate) ContainerName() string {
+	h := md5.New()
+	e := json.NewEncoder(h)
+	if err := e.Encode(c); err != nil {
+		panic("Failed to encode crate to JSON: " + err.Error())
+	}
+	_, err := h.Write([]byte(c.projectPath))
+	if err != nil {
+		panic("Failed to write project path: " + err.Error())
+	}
+	hash := hex.EncodeToString(h.Sum(nil))
+	return "wr:" + hash
 }

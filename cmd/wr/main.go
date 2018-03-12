@@ -47,6 +47,8 @@ func main() {
 	}
 	log.Printf("Crate: %#v", crate)
 
+	log.Printf("Container: %s", crate.ContainerName())
+
 	c, err := client.NewEnvClient()
 	if err != nil {
 		log.Fatalf("Failed to create docker client: %s", err)
