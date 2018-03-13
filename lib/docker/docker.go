@@ -138,15 +138,7 @@ func (c *Connection) EnsureRunning(crate *config.Crate) (string, error) {
 
 func (c *Connection) ExecCmd(id string, cmd []string) (int, error) {
 	inFd, inTerm := term.GetFdInfo(os.Stdin)
-	log.Printf("IN: fd=%d, term=%v", inFd, inTerm)
-
-	outFd, outTerm := term.GetFdInfo(os.Stdout)
-	log.Printf("OUT: fd=%d, term=%v", outFd, outTerm)
-
-	// size, err := term.GetWinsize(inFd)
-	// if err != nil {
-	// 	return -1, fmt.Errorf("Failed to get terminal size: %s", err)
-	// }
+	outFd, _ := term.GetFdInfo(os.Stdout)
 
 	config := types.ExecConfig{
 		AttachStdin:  true,
@@ -155,10 +147,12 @@ func (c *Connection) ExecCmd(id string, cmd []string) (int, error) {
 		Tty:          inTerm,
 		Cmd:          cmd,
 	}
+
 	resp, err := c.c.ContainerExecCreate(c.ctx, id, config)
 	if err != nil {
 		return -1, err
 	}
+
 	execID := resp.ID
 	if execID == "" {
 		return -1, fmt.Errorf("Got empty exec ID")
@@ -174,8 +168,6 @@ func (c *Connection) ExecCmd(id string, cmd []string) (int, error) {
 	defer attach.Close()
 
 	if inTerm {
-		log.Printf("Raw Terminal ...")
-
 		inState, err := term.SetRawTerminal(inFd)
 		if err != nil {
 			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
@@ -223,7 +215,6 @@ func (c *Connection) ExecCmd(id string, cmd []string) (int, error) {
 			}
 		}()
 	} else {
-		log.Printf("Boring regular style terminal")
 		go func() {
 			_, err := stdcopy.StdCopy(os.Stdout, os.Stderr, attach.Reader)
 			log.Printf("Copy done")

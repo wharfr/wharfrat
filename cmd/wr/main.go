@@ -16,6 +16,10 @@ type Options struct {
 	Crate   string `short:"c" long:"crate"`
 }
 
+func server(opts Options, args []string) int {
+	select {}
+}
+
 func client(opts Options, args []string) int {
 	crate, err := config.GetCrate(".", opts.Crate)
 	if err != nil {
@@ -63,7 +67,7 @@ func main() {
 	log.Printf("Args: %#v, Opts: %#v", args, opts)
 
 	if opts.Server {
-		select {}
+		os.Exit(server(opts, args))
 	}
 
 	os.Exit(client(opts, args))
