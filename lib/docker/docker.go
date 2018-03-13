@@ -8,8 +8,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	"git.qur.me/qur/wharf_rat/lib/config"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/term"
 	"golang.org/x/net/context"
@@ -57,6 +60,79 @@ func (c *Connection) Start(id string) error {
 
 func (c *Connection) Unpause(id string) error {
 	return c.c.ContainerUnpause(c.ctx, id)
+}
+
+func (c *Connection) Create(crate *config.Crate) (string, error) {
+	self, err := os.Readlink("/proc/self/exe")
+	if err != nil {
+		return "", fmt.Errorf("Failed to get self: %s", err)
+	}
+
+	config := &container.Config{
+		Cmd:   []string{"/wr", "-s"},
+		Image: "centos:6.8",
+	}
+
+	hostConfig := &container.HostConfig{
+		Binds: []string{
+			"/home:/home",
+			self + ":/wr:ro",
+		},
+	}
+
+	networkingConfig := &network.NetworkingConfig{}
+
+	create, err := c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, crate.ContainerName())
+	if err != nil {
+		return "", err
+	}
+	cid := create.ID
+
+	if err := c.c.ContainerStart(c.ctx, cid, types.ContainerStartOptions{}); err != nil {
+		return "", err
+	}
+
+	return cid, nil
+}
+
+func (c *Connection) EnsureRunning(crate *config.Crate) (string, error) {
+	container, err := c.GetContainer(crate.ContainerName())
+	if err != nil {
+		log.Fatalf("Failed to get docker container: %s", err)
+	}
+
+	if container == nil {
+		return c.Create(crate)
+	}
+
+	log.Printf("FOUND %s %s", container.ID, container.State)
+
+	switch container.State {
+	case "created":
+		if err := c.Start(container.ID); err != nil {
+			return "", fmt.Errorf("Failed to start container: %s", err)
+		}
+	case "running":
+		log.Printf("RUNNING")
+	case "paused":
+		if err := c.Unpause(container.ID); err != nil {
+			return "", fmt.Errorf("Failed to start container: %s", err)
+		}
+	case "restarting":
+		return "", fmt.Errorf("State %s NOT IMPLEMENTED", container.State)
+	case "removing":
+		return "", fmt.Errorf("State %s NOT IMPLEMENTED", container.State)
+	case "exited":
+		if err := c.Start(container.ID); err != nil {
+			return "", fmt.Errorf("Failed to start container: %s", err)
+		}
+	case "dead":
+		return "", fmt.Errorf("State %s NOT IMPLEMENTED", container.State)
+	default:
+		return "", fmt.Errorf("Invalid container state: %s", container.State)
+	}
+
+	return container.ID, nil
 }
 
 func (c *Connection) ExecCmd(id string, cmd []string) (int, error) {

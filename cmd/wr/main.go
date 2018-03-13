@@ -16,6 +16,39 @@ type Options struct {
 	Crate   string `short:"c" long:"crate"`
 }
 
+func client(opts Options, args []string) int {
+	crate, err := config.GetCrate(".", opts.Crate)
+	if err != nil {
+		log.Fatalf("Config error: %s", err)
+	}
+	log.Printf("Crate: %#v", crate)
+
+	log.Printf("Container: %s", crate.ContainerName())
+
+	c, err := docker.Connect()
+	if err != nil {
+		log.Fatalf("Failed to create docker client: %s", err)
+	}
+
+	container, err := c.EnsureRunning(crate)
+	if err != nil {
+		log.Fatalf("Failed to run container: %s", err)
+	}
+
+	if len(args) == 0 {
+		args = append(args, "/bin/bash")
+	}
+
+	ret, err := c.ExecCmd(container, args)
+	if err != nil {
+		log.Fatalf("Failed to exec command: %s", err)
+	}
+
+	log.Printf("RETCODE: %d", ret)
+
+	return ret
+}
+
 func main() {
 	opts := Options{}
 
@@ -33,61 +66,7 @@ func main() {
 		select {}
 	}
 
-	crate, err := config.GetCrate(".", opts.Crate)
-	if err != nil {
-		log.Fatalf("Config error: %s", err)
-	}
-	log.Printf("Crate: %#v", crate)
-
-	log.Printf("Container: %s", crate.ContainerName())
-
-	c, err := docker.Connect()
-	if err != nil {
-		log.Fatalf("Failed to create docker client: %s", err)
-	}
-
-	container, err := c.GetContainer("test")
-	if err != nil {
-		log.Fatalf("Failed to get docker container: %s", err)
-	}
-
-	log.Printf("FOUND %s %s", container.ID, container.State)
-
-	switch container.State {
-	case "created":
-		if err := c.Start(container.ID); err != nil {
-			log.Fatalf("Failed to start container: %s", err)
-		}
-	case "running":
-		log.Printf("RUNNING")
-	case "paused":
-		if err := c.Unpause(container.ID); err != nil {
-			log.Fatalf("Failed to start container: %s", err)
-		}
-	case "restarting":
-		log.Fatalf("State %s NOT IMPLEMENTED", container.State)
-	case "removing":
-		log.Fatalf("State %s NOT IMPLEMENTED", container.State)
-	case "exited":
-		if err := c.Start(container.ID); err != nil {
-			log.Fatalf("Failed to start container: %s", err)
-		}
-	case "dead":
-		log.Fatalf("State %s NOT IMPLEMENTED", container.State)
-	default:
-		log.Fatalf("Invalid container state: %s", container.State)
-	}
-
-	if len(args) == 0 {
-		args = append(args, "/bin/bash")
-	}
-
-	ret, err := c.ExecCmd(container.ID, args)
-	if err != nil {
-		log.Fatalf("Failed to exec command: %s", err)
-	}
-
-	log.Printf("RETCODE: %d", ret)
+	os.Exit(client(opts, args))
 
 	//
 	// inFd, inTerm := term.GetFdInfo(os.Stdin)

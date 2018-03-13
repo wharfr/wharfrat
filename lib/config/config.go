@@ -138,5 +138,5 @@ func (c *Crate) ContainerName() string {
 		panic("Failed to write project path: " + err.Error())
 	}
 	hash := hex.EncodeToString(h.Sum(nil))
-	return "wr:" + hash
+	return "wr_" + hash
 }
