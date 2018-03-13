@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/docker/pkg/term"
 	"golang.org/x/net/context"
 )
@@ -151,7 +152,7 @@ func (c *Connection) ExecCmd(id string, cmd []string) (int, error) {
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
-		Tty:          true,
+		Tty:          inTerm,
 		Cmd:          cmd,
 	}
 	resp, err := c.c.ContainerExecCreate(c.ctx, id, config)
@@ -164,7 +165,7 @@ func (c *Connection) ExecCmd(id string, cmd []string) (int, error) {
 	}
 
 	startCheck := types.ExecStartCheck{
-		Tty: true,
+		Tty: inTerm,
 	}
 	attach, err := c.c.ContainerExecAttach(c.ctx, execID, startCheck)
 	if err != nil {
@@ -172,46 +173,63 @@ func (c *Connection) ExecCmd(id string, cmd []string) (int, error) {
 	}
 	defer attach.Close()
 
-	inState, err := term.SetRawTerminal(inFd)
-	if err != nil {
-		return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
-	}
-	defer term.RestoreTerminal(inFd, inState)
+	if inTerm {
+		log.Printf("Raw Terminal ...")
 
-	outState, err := term.SetRawTerminal(outFd)
-	if err != nil {
-		return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
+		inState, err := term.SetRawTerminal(inFd)
+		if err != nil {
+			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
+		}
+		defer term.RestoreTerminal(inFd, inState)
+
+		outState, err := term.SetRawTerminal(outFd)
+		if err != nil {
+			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
+		}
+		defer term.RestoreTerminal(outFd, outState)
 	}
-	defer term.RestoreTerminal(outFd, outState)
 
 	outChan := make(chan error)
 
-	go io.Copy(attach.Conn, os.Stdin)
 	go func() {
-		_, err := io.Copy(os.Stdout, attach.Reader)
-		outChan <- err
+		io.Copy(attach.Conn, os.Stdin)
+		attach.CloseWrite()
 	}()
 
-	resizeTty := func() {
-		size, err := term.GetWinsize(inFd)
-		if (size.Height == 0 && size.Width == 0) || err != nil {
-			return
+	if inTerm {
+		go func() {
+			_, err := io.Copy(os.Stdout, attach.Reader)
+			outChan <- err
+		}()
+
+		resizeTty := func() {
+			size, err := term.GetWinsize(inFd)
+			if (size.Height == 0 && size.Width == 0) || err != nil {
+				return
+			}
+			c.c.ContainerExecResize(c.ctx, execID, types.ResizeOptions{
+				Height: uint(size.Height),
+				Width:  uint(size.Width),
+			})
 		}
-		c.c.ContainerExecResize(c.ctx, execID, types.ResizeOptions{
-			Height: uint(size.Height),
-			Width:  uint(size.Width),
-		})
+
+		resizeTty()
+
+		go func() {
+			sigchan := make(chan os.Signal, 1)
+			signal.Notify(sigchan, syscall.SIGWINCH)
+			for range sigchan {
+				resizeTty()
+			}
+		}()
+	} else {
+		log.Printf("Boring regular style terminal")
+		go func() {
+			_, err := stdcopy.StdCopy(os.Stdout, os.Stderr, attach.Reader)
+			log.Printf("Copy done")
+			outChan <- err
+		}()
 	}
-
-	resizeTty()
-
-	go func() {
-		sigchan := make(chan os.Signal, 1)
-		signal.Notify(sigchan, syscall.SIGWINCH)
-		for range sigchan {
-			resizeTty()
-		}
-	}()
 
 	// Wait for copies to finish
 	if err = <-outChan; err != nil {
