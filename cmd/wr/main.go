@@ -78,6 +78,10 @@ func main() {
 		log.Fatalf("Invalid container state: %s", container.State)
 	}
 
+	if len(args) == 0 {
+		args = append(args, "/bin/bash")
+	}
+
 	ret, err := c.ExecCmd(container.ID, args)
 	if err != nil {
 		log.Fatalf("Failed to exec command: %s", err)
