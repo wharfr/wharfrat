@@ -78,6 +78,13 @@ func main() {
 		log.Fatalf("Invalid container state: %s", container.State)
 	}
 
+	ret, err := c.ExecCmd(container.ID, args)
+	if err != nil {
+		log.Fatalf("Failed to exec command: %s", err)
+	}
+
+	log.Printf("RETCODE: %d", ret)
+
 	//
 	// inFd, inTerm := term.GetFdInfo(os.Stdin)
 	// log.Printf("IN: fd=%d, term=%v", inFd, inTerm)
