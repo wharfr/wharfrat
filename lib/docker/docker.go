@@ -78,14 +78,14 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	config := &container.Config{
-		Cmd:   []string{"/wr", "--server"},
+		Cmd:   []string{"/sbin/wr-init", "--server"},
 		Image: "centos:6.8",
 	}
 
 	hostConfig := &container.HostConfig{
 		Binds: []string{
 			"/home:/home",
-			self + ":/wr:ro",
+			self + ":/sbin/wr-init:ro",
 		},
 	}
 
