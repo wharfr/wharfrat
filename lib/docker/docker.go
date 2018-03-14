@@ -79,7 +79,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	config := &container.Config{
 		Cmd:   []string{"/sbin/wr-init", "--server"},
-		Image: "centos:6.8",
+		Image: crate.Image,
 	}
 
 	hostConfig := &container.HostConfig{

@@ -11,3 +11,6 @@ image = "alpha"
 
 [crates.beta]
 image = "other/beta:0.1"
+
+[crates.ubuntu]
+image = "ubuntu"
