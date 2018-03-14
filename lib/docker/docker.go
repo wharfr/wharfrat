@@ -35,6 +35,10 @@ func Connect() (*Connection, error) {
 	}, nil
 }
 
+func (c *Connection) Close() error {
+	return c.c.Close()
+}
+
 func (c *Connection) GetContainer(name string) (*types.Container, error) {
 	containers, err := c.c.ContainerList(c.ctx, types.ContainerListOptions{
 		All:     true,
@@ -63,6 +67,10 @@ func (c *Connection) Unpause(id string) error {
 	return c.c.ContainerUnpause(c.ctx, id)
 }
 
+func (c *Connection) Stop(id string) error {
+	return c.c.ContainerStop(c.ctx, id, nil)
+}
+
 func (c *Connection) Create(crate *config.Crate) (string, error) {
 	self, err := os.Readlink("/proc/self/exe")
 	if err != nil {
@@ -70,7 +78,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	config := &container.Config{
-		Cmd:   []string{"/wr", "-s"},
+		Cmd:   []string{"/wr", "--server"},
 		Image: "centos:6.8",
 	}
 
@@ -110,9 +118,7 @@ func (c *Connection) EnsureRunning(crate *config.Crate) (string, error) {
 
 	switch container.State {
 	case "created":
-		if err := c.Start(container.ID); err != nil {
-			return "", fmt.Errorf("Failed to start container: %s", err)
-		}
+		return "", fmt.Errorf("State %s NOT IMPLEMENTED", container.State)
 	case "running":
 		log.Printf("RUNNING")
 	case "paused":
@@ -134,6 +140,50 @@ func (c *Connection) EnsureRunning(crate *config.Crate) (string, error) {
 	}
 
 	return container.ID, nil
+}
+
+func (c *Connection) EnsureStopped(crate *config.Crate) error {
+	log.Printf("STOP %s", crate.ContainerName())
+
+	container, err := c.GetContainer(crate.ContainerName())
+	if err != nil {
+		log.Fatalf("Failed to get docker container: %s", err)
+	}
+
+	if container == nil {
+		return nil
+	}
+
+	log.Printf("FOUND %s %s", container.ID, container.State)
+
+	// TODO(jp3): implement stopping the container
+
+	switch container.State {
+	case "created":
+		log.Printf("CREATED")
+	case "running":
+		if err := c.Stop(container.ID); err != nil {
+			return fmt.Errorf("Failed to stop container: %s", err)
+		}
+	case "paused":
+		if err := c.Stop(container.ID); err != nil {
+			return fmt.Errorf("Failed to stop container: %s", err)
+		}
+	case "restarting":
+		if err := c.Stop(container.ID); err != nil {
+			return fmt.Errorf("Failed to stop container: %s", err)
+		}
+	case "removing":
+		log.Printf("REMOVING")
+	case "exited":
+		log.Printf("EXITED")
+	case "dead":
+		log.Printf("DEAD")
+	default:
+		return fmt.Errorf("Invalid container state: %s", container.State)
+	}
+
+	return nil
 }
 
 func (c *Connection) ExecCmd(id string, cmd []string) (int, error) {

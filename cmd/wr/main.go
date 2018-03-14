@@ -11,13 +11,36 @@ import (
 )
 
 type Options struct {
-	Server  bool   `short:"s" long:"server" hidden:"true"`
+	Server  bool   `long:"server" hidden:"true"`
+	Stop    bool   `short:"s" long:"stop"`
 	Verbose bool   `short:"v" long:"verbose"`
 	Crate   string `short:"c" long:"crate"`
 }
 
 func server(opts Options, args []string) int {
 	select {}
+}
+
+func stop(opts Options, args []string) int {
+	crate, err := config.GetCrate(".", opts.Crate)
+	if err != nil {
+		log.Fatalf("Config error: %s", err)
+	}
+	log.Printf("Crate: %#v", crate)
+
+	log.Printf("Container: %s", crate.ContainerName())
+
+	c, err := docker.Connect()
+	if err != nil {
+		log.Fatalf("Failed to create docker client: %s", err)
+	}
+	defer c.Close()
+
+	if err := c.EnsureStopped(crate); err != nil {
+		log.Fatalf("Failed to stop container: %s", err)
+	}
+
+	return 0
 }
 
 func client(opts Options, args []string) int {
@@ -33,6 +56,7 @@ func client(opts Options, args []string) int {
 	if err != nil {
 		log.Fatalf("Failed to create docker client: %s", err)
 	}
+	defer c.Close()
 
 	container, err := c.EnsureRunning(crate)
 	if err != nil {
@@ -68,6 +92,10 @@ func main() {
 
 	if opts.Server {
 		os.Exit(server(opts, args))
+	}
+
+	if opts.Stop {
+		os.Exit(stop(opts, args))
 	}
 
 	os.Exit(client(opts, args))
