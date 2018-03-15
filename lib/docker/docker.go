@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"git.qur.me/qur/wharf_rat/lib/config"
@@ -48,7 +49,7 @@ func (c *Connection) GetContainer(name string) (*types.Container, error) {
 		return nil, err
 	}
 	for _, container := range containers {
-		log.Printf("CONTAINER %s %v %s", container.ID, container.Names, container.Status)
+		log.Printf("CONTAINER %s %v %s %v", container.ID, container.Names, container.Status, container.Labels)
 	}
 	if len(containers) == 0 {
 		return nil, nil
@@ -78,15 +79,30 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	config := &container.Config{
-		Cmd:   []string{"/sbin/wr-init", "--server"},
-		Image: crate.Image,
+		Cmd:      []string{"/sbin/wr-init", "--server"},
+		Image:    crate.Image,
+		Hostname: crate.Hostname,
+		Labels: map[string]string{
+			"me.qur.wharf-rat.crate": crate.Json(),
+		},
+	}
+
+	tmpfs := make(map[string]string)
+	for _, entry := range crate.Tmpfs {
+		if parts := strings.SplitN(entry, ":", 2); len(parts) > 1 {
+			tmpfs[parts[0]] = parts[1]
+		} else {
+			tmpfs[parts[0]] = ""
+		}
 	}
 
 	hostConfig := &container.HostConfig{
 		Binds: []string{
 			"/home:/home",
+			"/tmp/.X11-unix:/tmp/.X11-unix",
 			self + ":/sbin/wr-init:ro",
 		},
+		Tmpfs: tmpfs,
 	}
 
 	networkingConfig := &network.NetworkingConfig{}
@@ -115,6 +131,11 @@ func (c *Connection) EnsureRunning(crate *config.Crate) (string, error) {
 	}
 
 	log.Printf("FOUND %s %s", container.ID, container.State)
+
+	oldJson := container.Labels["me.qur.wharf-rat.crate"]
+	if oldJson != crate.Json() {
+		return "", fmt.Errorf("Container built from old config")
+	}
 
 	switch container.State {
 	case "created":
@@ -186,9 +207,51 @@ func (c *Connection) EnsureStopped(crate *config.Crate) error {
 	return nil
 }
 
-func (c *Connection) ExecCmd(id string, cmd []string) (int, error) {
+func (c *Connection) EnsureRemoved(crate *config.Crate) error {
+	log.Printf("REMOVE %s", crate.ContainerName())
+
+	container, err := c.GetContainer(crate.ContainerName())
+	if err != nil {
+		log.Fatalf("Failed to get docker container: %s", err)
+	}
+
+	if container == nil {
+		return nil
+	}
+
+	log.Printf("FOUND %s %s", container.ID, container.State)
+
+	return c.c.ContainerRemove(c.ctx, crate.ContainerName(), types.ContainerRemoveOptions{
+		Force: true,
+	})
+}
+
+func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate) (int, error) {
 	inFd, inTerm := term.GetFdInfo(os.Stdin)
 	outFd, _ := term.GetFdInfo(os.Stdout)
+
+	env := []string{
+		"WHARF_RAT_CRATE=" + crate.Name(),
+		"WHARF_RAT_PROJECT=" + crate.ProjectPath(),
+	}
+
+	whitelist := map[string]bool{
+		"DISPLAY":    true,
+		"EDITOR":     true,
+		"LESS":       true,
+		"LS_COLORS":  true,
+		"LS_OPTIONS": true,
+		"MORE":       true,
+		"PAGER":      true,
+		"TERM":       true,
+		"XAUTHORITY": true,
+	}
+
+	for _, entry := range os.Environ() {
+		if parts := strings.SplitN(entry, "=", 2); whitelist[parts[0]] {
+			env = append(env, entry)
+		}
+	}
 
 	config := types.ExecConfig{
 		AttachStdin:  true,
@@ -196,6 +259,7 @@ func (c *Connection) ExecCmd(id string, cmd []string) (int, error) {
 		AttachStderr: true,
 		Tty:          inTerm,
 		Cmd:          cmd,
+		Env:          env,
 	}
 
 	resp, err := c.c.ContainerExecCreate(c.ctx, id, config)

@@ -12,9 +12,10 @@ import (
 
 type Options struct {
 	Server  bool   `long:"server" hidden:"true"`
-	Stop    bool   `short:"s" long:"stop"`
+	Stop    bool   `short:"s" long:"stop" description:"Stop contiainer instead of running command"`
 	Verbose bool   `short:"v" long:"verbose"`
-	Crate   string `short:"c" long:"crate"`
+	Crate   string `short:"c" long:"crate" value-name:"NAME" description:"Name of crate to run"`
+	Clean   bool   `long:"clean" description:"Rebuild container from Image"`
 }
 
 func server(opts Options, args []string) int {
@@ -58,6 +59,12 @@ func client(opts Options, args []string) int {
 	}
 	defer c.Close()
 
+	if opts.Clean {
+		if err := c.EnsureRemoved(crate); err != nil {
+			log.Fatalf("Failed to remove container: %s", err)
+		}
+	}
+
 	container, err := c.EnsureRunning(crate)
 	if err != nil {
 		log.Fatalf("Failed to run container: %s", err)
@@ -67,7 +74,7 @@ func client(opts Options, args []string) int {
 		args = append(args, "/bin/bash")
 	}
 
-	ret, err := c.ExecCmd(container, args)
+	ret, err := c.ExecCmd(container, args, crate)
 	if err != nil {
 		log.Fatalf("Failed to exec command: %s", err)
 	}

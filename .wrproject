@@ -14,3 +14,4 @@ image = "other/beta:0.1"
 
 [crates.ubuntu]
 image = "ubuntu"
+hostname = "test"

@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/burntsushi/toml"
 )
@@ -17,7 +18,10 @@ import (
 type Crate struct {
 	Image       string
 	Volumes     []string
+	Hostname    string
+	Tmpfs       []string
 	projectPath string
+	name        string
 }
 
 type Project struct {
@@ -121,22 +125,55 @@ func GetCrate(start, name string) (*Crate, error) {
 	if !ok {
 		return nil, fmt.Errorf("Unknown crate: %s", crateName)
 	}
+
+	if crate.Hostname == "" {
+		crate.Hostname = "dev"
+	}
+
 	crate.projectPath = project.path
+	crate.name = crateName
+
 	log.Printf("Crate: %s, Image: %s", crateName, crate.Image)
 
 	return &crate, nil
 }
 
+func (c *Crate) ProjectPath() string {
+	return c.projectPath
+}
+
+func (c *Crate) Name() string {
+	return c.name
+}
+
 func (c *Crate) ContainerName() string {
 	h := md5.New()
-	e := json.NewEncoder(h)
-	if err := e.Encode(c); err != nil {
-		panic("Failed to encode crate to JSON: " + err.Error())
-	}
 	_, err := h.Write([]byte(c.projectPath))
+	if err != nil {
+		panic("Failed to write project path: " + err.Error())
+	}
+	_, err = h.Write([]byte(c.name))
 	if err != nil {
 		panic("Failed to write project path: " + err.Error())
 	}
 	hash := hex.EncodeToString(h.Sum(nil))
 	return "wr_" + hash
+}
+
+func (c *Crate) Json() string {
+	b := &strings.Builder{}
+	e := json.NewEncoder(b)
+	if err := e.Encode(c); err != nil {
+		panic("Failed to encode crate to JSON: " + err.Error())
+	}
+	return b.String()
+}
+
+func (c *Crate) Hash() string {
+	h := md5.New()
+	e := json.NewEncoder(h)
+	if err := e.Encode(c); err != nil {
+		panic("Failed to encode crate to JSON: " + err.Error())
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
