@@ -31,9 +31,14 @@ func Connect() (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.Background()
+	before := c.ClientVersion()
+	c.NegotiateAPIVersion(ctx)
+	after := c.ClientVersion()
+	log.Printf("API: before: %s, after: %s", before, after)
 	return &Connection{
 		c:   c,
-		ctx: context.Background(),
+		ctx: ctx,
 	}, nil
 }
 
