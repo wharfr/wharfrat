@@ -241,7 +241,7 @@ func (c *Connection) EnsureRemoved(crate *config.Crate) error {
 	})
 }
 
-func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate) (int, error) {
+func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user string) (int, error) {
 	container, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
 	if err != nil {
 		return -1, err
@@ -278,7 +278,9 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate) (int,
 		}
 	}
 
-	user := fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
+	if user == "" {
+		user = fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
+	}
 
 	cwd, err := os.Getwd()
 	if err != nil {

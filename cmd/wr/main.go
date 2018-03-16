@@ -18,6 +18,7 @@ type Options struct {
 	Verbose bool   `short:"v" long:"verbose"`
 	Crate   string `short:"c" long:"crate" value-name:"NAME" description:"Name of crate to run"`
 	Clean   bool   `long:"clean" description:"Rebuild container from Image"`
+	User    string `short:"u" long:"user" value-name:"USER[:GROUP]" description:"Override user/group for running command"`
 }
 
 type ServerOptions struct {
@@ -161,7 +162,7 @@ func client(opts Options, args []string) int {
 		args = append(args, "/bin/bash")
 	}
 
-	ret, err := c.ExecCmd(container, args, crate)
+	ret, err := c.ExecCmd(container, args, crate, opts.User)
 	if err != nil {
 		log.Fatalf("Failed to exec command: %s", err)
 	}
