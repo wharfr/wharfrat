@@ -241,7 +241,7 @@ func (c *Connection) EnsureRemoved(crate *config.Crate) error {
 	})
 }
 
-func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user string) (int, error) {
+func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user, workdir string) (int, error) {
 	container, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
 	if err != nil {
 		return -1, err
@@ -282,12 +282,14 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user 
 		user = fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
 	}
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return -1, fmt.Errorf("Failed to get current directory: %s", err)
+	if workdir == "" {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return -1, fmt.Errorf("Failed to get current directory: %s", err)
+		}
 	}
 
-	log.Printf("USER: %s, CWD: %s", user, cwd)
+	log.Printf("User: %s, Workdir: %s", user, workdir)
 
 	config := types.ExecConfig{
 		AttachStdin:  true,
@@ -297,7 +299,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user 
 		Cmd:          cmds,
 		Env:          env,
 		User:         user,
-		WorkingDir:   cwd,
+		WorkingDir:   workdir,
 	}
 
 	resp, err := c.c.ContainerExecCreate(c.ctx, id, config)
