@@ -4,7 +4,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"syscall"
 
 	"git.qur.me/qur/wharf_rat/lib/config"
 	"git.qur.me/qur/wharf_rat/lib/docker"
@@ -13,7 +15,6 @@ import (
 )
 
 type Options struct {
-	Server  bool   `long:"server" hidden:"true"`
 	Stop    bool   `short:"s" long:"stop" description:"Stop contiainer instead of running command"`
 	Verbose bool   `short:"v" long:"verbose"`
 	Crate   string `short:"c" long:"crate" value-name:"NAME" description:"Name of crate to run"`
@@ -23,12 +24,14 @@ type Options struct {
 }
 
 type ServerOptions struct {
+	Server bool     `long:"server"`
 	User   string   `short:"u" long:"user" value-name:"USER"`
 	Uid    string   `short:"U" long:"uid" value-name:"UID" default:"1000"`
 	Group  string   `short:"g" long:"group" value-name:"GROUP"`
 	Gid    string   `short:"G" long:"gid" value-name:"GID" default:"1000"`
 	Groups []string `short:"e" long:"extra-group" value-name:"GROUP"`
 	Name   string   `short:"n" long:"name" value-name:"NAME"`
+	Proxy  bool     `short:"p" long:"proxy"`
 }
 
 func setup_group(opts ServerOptions) error {
@@ -85,30 +88,60 @@ func setup_user(opts ServerOptions) error {
 	return cmd.Run()
 }
 
-func server(opts Options, args []string) int {
-	sopts := ServerOptions{}
+func server() int {
+	opts := ServerOptions{}
 
-	sargs, err := flags.ParseArgs(&sopts, args)
+	args, err := flags.Parse(&opts)
 	if flagErr, ok := err.(*flags.Error); ok && flagErr.Type == flags.ErrHelp {
-		os.Exit(0)
+		return 0
 	} else if err != nil {
-		os.Exit(1)
+		return 1
 	}
-	log.Printf("Server Args: %#v, Opts: %#v", sargs, sopts)
+	log.Printf("Server Args: %#v, Opts: %#v", args, opts)
 
-	if sopts.Group != "" {
-		if err := setup_group(sopts); err != nil {
+	if opts.Server && opts.Proxy {
+		log.Fatalf("--server and --proxy are not compatible")
+	}
+
+	if opts.Group != "" {
+		if err := setup_group(opts); err != nil {
 			log.Fatalf("Failed to setup group: %s", err)
 		}
 	}
 
-	if sopts.User != "" {
-		if err := setup_user(sopts); err != nil {
+	if opts.User != "" {
+		if err := setup_user(opts); err != nil {
 			log.Fatalf("Failed to setup user: %s", err)
 		}
 	}
 
-	select {}
+	if opts.Server {
+		select {}
+	}
+
+	if opts.Proxy {
+		if len(args) < 2 {
+			log.Fatalf("Need at least 2 args for --proxy")
+		}
+		dir := args[0]
+		argv := args[1:]
+		log.Printf("PROXY: dir: %s, cmd: %v", dir, argv)
+
+		if err := os.Chdir(dir); err != nil {
+			log.Fatalf("Failed to change directory to %s: %s", dir, err)
+		}
+
+		cmd, err := exec.LookPath(args[1])
+		if err != nil {
+			log.Fatalf("Failed to find %s: %s", args[1], err)
+		}
+
+		if err := syscall.Exec(cmd, argv, os.Environ()); err != nil {
+			log.Fatalf("Failed to exec %s: %s", err)
+		}
+	}
+
+	return 0
 }
 
 func stop(opts Options, args []string) int {
@@ -174,6 +207,10 @@ func client(opts Options, args []string) int {
 }
 
 func main() {
+	if filepath.Base(os.Args[0]) == "wr-init" {
+		os.Exit(server())
+	}
+
 	opts := Options{}
 
 	parser := flags.NewParser(&opts, flags.Default|flags.PassAfterNonOption)
@@ -185,10 +222,6 @@ func main() {
 		os.Exit(1)
 	}
 	log.Printf("Args: %#v, Opts: %#v", args, opts)
-
-	if opts.Server {
-		os.Exit(server(opts, args))
-	}
 
 	if opts.Stop {
 		os.Exit(stop(opts, args))

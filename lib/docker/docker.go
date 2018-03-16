@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/docker/pkg/term"
@@ -97,7 +98,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	config := &container.Config{
 		User: "root:root",
 		Cmd: []string{
-			"/sbin/wr-init", "--server", "--",
+			"/sbin/wr-init", "--server",
 			"--user", usr.Username, "--uid", usr.Uid, "--name", usr.Name,
 			"--group", group.Name, "--gid", group.Gid,
 		},
@@ -296,6 +297,11 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	}
 
 	log.Printf("User: %s, Workdir: %s", user, workdir)
+
+	if versions.LessThan(c.c.ClientVersion(), "1.35") {
+		log.Printf("WORKDIR WORKAROUND")
+		cmds = append([]string{"/sbin/wr-init", "--proxy", workdir}, cmds...)
+	}
 
 	config := types.ExecConfig{
 		AttachStdin:  true,
