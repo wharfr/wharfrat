@@ -95,6 +95,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	config := &container.Config{
+		User: "root:root",
 		Cmd: []string{
 			"/sbin/wr-init", "--server", "--",
 			"--user", usr.Username, "--uid", usr.Uid, "--name", usr.Name,
