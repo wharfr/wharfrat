@@ -227,6 +227,16 @@ func (c *Connection) EnsureRemoved(crate *config.Crate) error {
 }
 
 func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate) (int, error) {
+	container, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
+	if err != nil {
+		return -1, err
+	}
+
+	cmds := []string(container.Config.Entrypoint)
+	cmds = append(cmds, cmd...)
+
+	log.Printf("CMD: %v", cmds)
+
 	inFd, inTerm := term.GetFdInfo(os.Stdin)
 	outFd, _ := term.GetFdInfo(os.Stdout)
 
@@ -258,7 +268,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate) (int,
 		AttachStdout: true,
 		AttachStderr: true,
 		Tty:          inTerm,
-		Cmd:          cmd,
+		Cmd:          cmds,
 		Env:          env,
 	}
 
