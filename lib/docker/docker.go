@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"os/user"
 	"strings"
 	"syscall"
 
@@ -78,8 +79,22 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		return "", fmt.Errorf("Failed to get self: %s", err)
 	}
 
+	usr, err := user.Current()
+	if err != nil {
+		return "", fmt.Errorf("Failed to get user information: %s", err)
+	}
+
+	group, err := user.LookupGroupId(usr.Gid)
+	if err != nil {
+		return "", fmt.Errorf("Failed to get group information: %s", err)
+	}
+
 	config := &container.Config{
-		Cmd:      []string{"/sbin/wr-init", "--server"},
+		Cmd: []string{
+			"/sbin/wr-init", "--server", "--",
+			"--user", usr.Username, "--uid", usr.Uid, "--name", usr.Name,
+			"--group", group.Name, "--gid", group.Gid,
+		},
 		Image:    crate.Image,
 		Hostname: crate.Hostname,
 		Labels: map[string]string{
@@ -263,6 +278,15 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate) (int,
 		}
 	}
 
+	user := fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return -1, fmt.Errorf("Failed to get current directory: %s", err)
+	}
+
+	log.Printf("USER: %s, CWD: %s", user, cwd)
+
 	config := types.ExecConfig{
 		AttachStdin:  true,
 		AttachStdout: true,
@@ -270,6 +294,8 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate) (int,
 		Tty:          inTerm,
 		Cmd:          cmds,
 		Env:          env,
+		User:         user,
+		WorkingDir:   cwd,
 	}
 
 	resp, err := c.c.ContainerExecCreate(c.ctx, id, config)

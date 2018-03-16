@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"os"
+	"os/exec"
+	"strings"
 
 	"git.qur.me/qur/wharf_rat/lib/config"
 	"git.qur.me/qur/wharf_rat/lib/docker"
@@ -18,7 +20,92 @@ type Options struct {
 	Clean   bool   `long:"clean" description:"Rebuild container from Image"`
 }
 
+type ServerOptions struct {
+	User   string   `short:"u" long:"user" value-name:"USER"`
+	Uid    string   `short:"U" long:"uid" value-name:"UID" default:"1000"`
+	Group  string   `short:"g" long:"group" value-name:"GROUP"`
+	Gid    string   `short:"G" long:"gid" value-name:"GID" default:"1000"`
+	Groups []string `short:"e" long:"extra-group" value-name:"GROUP"`
+	Name   string   `short:"n" long:"name" value-name:"NAME"`
+}
+
+func setup_group(opts ServerOptions) error {
+	args := []string{
+		"--force",
+	}
+
+	if opts.Gid != "0" {
+		args = append(args, "--gid", opts.Gid)
+	}
+
+	args = append(args, opts.Group)
+
+	log.Printf("groupadd args: %#v", args)
+
+	cmd := exec.Command("/usr/sbin/groupadd", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+func setup_user(opts ServerOptions) error {
+	args := []string{
+		"--no-create-home",
+	}
+
+	if opts.Uid != "0" {
+		args = append(args, "--uid", opts.Uid)
+	}
+
+	if opts.Group != "" {
+		args = append(args, "--gid", opts.Group, "--no-user-group")
+	} else {
+		args = append(args, "--user-group")
+	}
+
+	if len(opts.Groups) > 0 {
+		args = append(args, "--groups", strings.Join(opts.Groups, ","))
+	}
+
+	if opts.Name != "" {
+		args = append(args, "--comment", opts.Name)
+	}
+
+	args = append(args, opts.User)
+
+	log.Printf("useradd args: %#v", args)
+
+	cmd := exec.Command("/usr/sbin/useradd", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
 func server(opts Options, args []string) int {
+	sopts := ServerOptions{}
+
+	sargs, err := flags.ParseArgs(&sopts, args)
+	if flagErr, ok := err.(*flags.Error); ok && flagErr.Type == flags.ErrHelp {
+		os.Exit(0)
+	} else if err != nil {
+		os.Exit(1)
+	}
+	log.Printf("Server Args: %#v, Opts: %#v", sargs, sopts)
+
+	if sopts.Group != "" {
+		if err := setup_group(sopts); err != nil {
+			log.Fatalf("Failed to setup group: %s", err)
+		}
+	}
+
+	if sopts.User != "" {
+		if err := setup_user(sopts); err != nil {
+			log.Fatalf("Failed to setup user: %s", err)
+		}
+	}
+
 	select {}
 }
 
