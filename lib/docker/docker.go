@@ -98,7 +98,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	config := &container.Config{
 		User: "root:root",
 		Cmd: []string{
-			"/sbin/wr-init", "--server",
+			"/sbin/wr-init", "server",
 			"--user", usr.Username, "--uid", usr.Uid, "--name", usr.Name,
 			"--group", group.Name, "--gid", group.Gid,
 		},
@@ -300,7 +300,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 
 	if versions.LessThan(c.c.ClientVersion(), "1.35") {
 		log.Printf("WORKDIR WORKAROUND")
-		cmds = append([]string{"/sbin/wr-init", "--proxy", workdir}, cmds...)
+		cmds = append([]string{"/sbin/wr-init", "proxy", workdir}, cmds...)
 	}
 
 	config := types.ExecConfig{

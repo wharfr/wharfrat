@@ -8,6 +8,7 @@ import (
 	"strings"
 	"syscall"
 
+	"git.qur.me/qur/wharf_rat/lib/cmd"
 	"git.qur.me/qur/wharf_rat/lib/config"
 	"git.qur.me/qur/wharf_rat/lib/docker"
 
@@ -206,7 +207,7 @@ func client(opts Options, args []string) int {
 	return ret
 }
 
-func main() {
+func xmain() {
 	if filepath.Base(os.Args[0]) == "wr-init" {
 		os.Exit(server())
 	}
@@ -228,4 +229,8 @@ func main() {
 	}
 
 	os.Exit(client(opts, args))
+}
+
+func main() {
+	os.Exit(cmd.Main())
 }
