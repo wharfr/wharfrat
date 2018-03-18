@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -20,23 +21,23 @@ type Proxy struct {
 func (p *Proxy) Execute(args []string) error {
 	log.Printf("PROXY: %s %#v", args, p)
 	if len(args) < 2 {
-		log.Fatalf("Need at least 2 args for proxy")
+		return fmt.Errorf("Need at least 2 args for proxy")
 	}
 	dir := args[0]
 	argv := args[1:]
 	log.Printf("PROXY: dir: %s, cmd: %v", dir, argv)
 
 	if err := os.Chdir(dir); err != nil {
-		log.Fatalf("Failed to change directory to %s: %s", dir, err)
+		return fmt.Errorf("Failed to change directory to %s: %s", dir, err)
 	}
 
 	cmd, err := exec.LookPath(args[1])
 	if err != nil {
-		log.Fatalf("Failed to find %s: %s", args[1], err)
+		return fmt.Errorf("Failed to find %s: %s", args[1], err)
 	}
 
 	if err := syscall.Exec(cmd, argv, os.Environ()); err != nil {
-		log.Fatalf("Failed to exec %s: %s", err)
+		return fmt.Errorf("Failed to exec %s: %s", err)
 	}
 	return nil
 }

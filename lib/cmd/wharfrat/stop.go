@@ -1,11 +1,10 @@
 package wharfrat
 
-import "log"
+import "fmt"
 
 type Stop struct {
 }
 
 func (s *Stop) Execute(args []string) error {
-	log.Fatalf("NOT IMPLEMENTED")
-	return nil
+	return fmt.Errorf("NOT IMPLEMENTED")
 }

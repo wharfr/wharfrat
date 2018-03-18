@@ -96,7 +96,7 @@ func (l *List) Execute(args []string) error {
 		project := filepath.Dir(projectFile)
 		crate, err := config.OpenCrate(projectFile, crateName)
 		if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
-			log.Fatalf("Failed to lookup crate: %s", err)
+			return fmt.Errorf("Failed to lookup crate: %s", err)
 		}
 
 		projectState := green

@@ -154,7 +154,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 func (c *Connection) EnsureRunning(crate *config.Crate) (string, error) {
 	container, err := c.GetContainer(crate.ContainerName())
 	if err != nil {
-		log.Fatalf("Failed to get docker container: %s", err)
+		return "", fmt.Errorf("Failed to get docker container: %s", err)
 	}
 
 	if container == nil {
@@ -199,7 +199,7 @@ func (c *Connection) EnsureStopped(crate *config.Crate) error {
 
 	container, err := c.GetContainer(crate.ContainerName())
 	if err != nil {
-		log.Fatalf("Failed to get docker container: %s", err)
+		return fmt.Errorf("Failed to get docker container: %s", err)
 	}
 
 	if container == nil {
@@ -243,7 +243,7 @@ func (c *Connection) EnsureRemoved(crate *config.Crate) error {
 
 	container, err := c.GetContainer(crate.ContainerName())
 	if err != nil {
-		log.Fatalf("Failed to get docker container: %s", err)
+		return fmt.Errorf("Failed to get docker container: %s", err)
 	}
 
 	if container == nil {

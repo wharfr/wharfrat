@@ -1,8 +1,10 @@
 package wr
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 
 	"git.qur.me/qur/wharf_rat/lib/config"
 	"git.qur.me/qur/wharf_rat/lib/docker"
@@ -20,10 +22,17 @@ type Options struct {
 	Debug   bool   `short:"d" long:"debug" description:"Show debug output"`
 }
 
+func fatal(msg string, args ...interface{}) int {
+	fmt.Fprintf(os.Stderr, "ERROR: ")
+	fmt.Fprintf(os.Stderr, msg, args...)
+	fmt.Fprintln(os.Stderr)
+	return 1
+}
+
 func stop(opts Options, args []string) int {
 	crate, err := config.GetCrate(".", opts.Crate)
 	if err != nil {
-		log.Fatalf("Config error: %s", err)
+		return fatal("Config error: %s", err)
 	}
 	log.Printf("Crate: %#v", crate)
 
@@ -31,12 +40,12 @@ func stop(opts Options, args []string) int {
 
 	c, err := docker.Connect()
 	if err != nil {
-		log.Fatalf("Failed to create docker client: %s", err)
+		return fatal("Failed to create docker client: %s", err)
 	}
 	defer c.Close()
 
 	if err := c.EnsureStopped(crate); err != nil {
-		log.Fatalf("Failed to stop container: %s", err)
+		return fatal("Failed to stop container: %s", err)
 	}
 
 	return 0
@@ -45,7 +54,7 @@ func stop(opts Options, args []string) int {
 func client(opts Options, args []string) int {
 	crate, err := config.GetCrate(".", opts.Crate)
 	if err != nil {
-		log.Fatalf("Config error: %s", err)
+		return fatal("Config error: %s", err)
 	}
 	log.Printf("Crate: %#v", crate)
 
@@ -53,19 +62,19 @@ func client(opts Options, args []string) int {
 
 	c, err := docker.Connect()
 	if err != nil {
-		log.Fatalf("Failed to create docker client: %s", err)
+		return fatal("Failed to create docker client: %s", err)
 	}
 	defer c.Close()
 
 	if opts.Clean {
 		if err := c.EnsureRemoved(crate); err != nil {
-			log.Fatalf("Failed to remove container: %s", err)
+			return fatal("Failed to remove container: %s", err)
 		}
 	}
 
 	container, err := c.EnsureRunning(crate)
 	if err != nil {
-		log.Fatalf("Failed to run container: %s", err)
+		return fatal("Failed to run container: %s", err)
 	}
 
 	if len(args) == 0 {
@@ -74,7 +83,7 @@ func client(opts Options, args []string) int {
 
 	ret, err := c.ExecCmd(container, args, crate, opts.User, opts.Workdir)
 	if err != nil {
-		log.Fatalf("Failed to exec command: %s", err)
+		return fatal("Failed to exec command: %s", err)
 	}
 
 	log.Printf("RETCODE: %d", ret)
