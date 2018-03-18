@@ -261,10 +261,10 @@ func (c *Connection) EnsureRunning(crate *config.Crate) (string, error) {
 	return container.ID, nil
 }
 
-func (c *Connection) EnsureStopped(crate *config.Crate) error {
-	log.Printf("STOP %s", crate.ContainerName())
+func (c *Connection) EnsureStopped(name string) error {
+	log.Printf("STOP %s", name)
 
-	container, err := c.GetContainer(crate.ContainerName())
+	container, err := c.GetContainer(name)
 	if err != nil {
 		return fmt.Errorf("Failed to get docker container: %s", err)
 	}
@@ -305,10 +305,10 @@ func (c *Connection) EnsureStopped(crate *config.Crate) error {
 	return nil
 }
 
-func (c *Connection) EnsureRemoved(crate *config.Crate) error {
-	log.Printf("REMOVE %s", crate.ContainerName())
+func (c *Connection) EnsureRemoved(name string) error {
+	log.Printf("REMOVE %s", name)
 
-	container, err := c.GetContainer(crate.ContainerName())
+	container, err := c.GetContainer(name)
 	if err != nil {
 		return fmt.Errorf("Failed to get docker container: %s", err)
 	}
@@ -319,7 +319,7 @@ func (c *Connection) EnsureRemoved(crate *config.Crate) error {
 
 	log.Printf("FOUND %s %s", container.ID, container.State)
 
-	return c.c.ContainerRemove(c.ctx, crate.ContainerName(), types.ContainerRemoveOptions{
+	return c.c.ContainerRemove(c.ctx, name, types.ContainerRemoveOptions{
 		Force: true,
 	})
 }

@@ -8,12 +8,12 @@ import (
 	"git.qur.me/qur/wharf_rat/lib/docker"
 )
 
-type Stop struct {
+type Remove struct {
 	All bool `short:"a" long:"all"`
 }
 
-func (s *Stop) Execute(args []string) error {
-	log.Printf("STOP opts: %#v, args: %s", s, args)
+func (s *Remove) Execute(args []string) error {
+	log.Printf("REMOVE opts: %#v, args: %s", s, args)
 
 	if s.All {
 		if len(args) != 0 {
@@ -50,10 +50,10 @@ func (s *Stop) Execute(args []string) error {
 		}
 
 		if s.All || names[name] {
-			if err := client.EnsureStopped(name); err != nil {
-				fmt.Printf("Failed to stop %s: %s\n", name, err)
+			if err := client.EnsureRemoved(name); err != nil {
+				fmt.Printf("Failed to remove %s: %s\n", name, err)
 			} else {
-				fmt.Printf("%s stopped\n", name)
+				fmt.Printf("%s removed\n", name)
 			}
 		}
 	}

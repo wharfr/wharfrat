@@ -44,7 +44,7 @@ func stop(opts Options, args []string) int {
 	}
 	defer c.Close()
 
-	if err := c.EnsureStopped(crate); err != nil {
+	if err := c.EnsureStopped(crate.ContainerName()); err != nil {
 		return fatal("Failed to stop container: %s", err)
 	}
 
@@ -67,7 +67,7 @@ func client(opts Options, args []string) int {
 	defer c.Close()
 
 	if opts.Clean {
-		if err := c.EnsureRemoved(crate); err != nil {
+		if err := c.EnsureRemoved(crate.ContainerName()); err != nil {
 			return fatal("Failed to remove container: %s", err)
 		}
 	}

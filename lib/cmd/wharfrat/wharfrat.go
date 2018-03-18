@@ -8,9 +8,11 @@ import (
 )
 
 type options struct {
-	List  `command:"list"`
-	Stop  `command:"stop"`
-	Debug bool `short:"d" long:"debug" description:"Show debug output"`
+	List   `command:"list"`
+	Start  `command:"start"`
+	Stop   `command:"stop"`
+	Remove `command:"remove"`
+	Debug  bool `short:"d" long:"debug" description:"Show debug output"`
 }
 
 func Main() int {
