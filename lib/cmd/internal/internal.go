@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"log"
-
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -16,13 +14,12 @@ func Main() int {
 
 	parser := flags.NewParser(&opts, flags.Default|flags.PassAfterNonOption)
 
-	args, err := parser.Parse()
+	_, err := parser.Parse()
 	if flagErr, ok := err.(*flags.Error); ok && flagErr.Type == flags.ErrHelp {
 		return 0
 	} else if err != nil {
 		return 1
 	}
-	log.Printf("Internal Args: %#v, Opts: %#v", args, opts)
 
 	return 0
 }

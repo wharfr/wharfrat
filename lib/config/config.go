@@ -31,6 +31,7 @@ type Project struct {
 }
 
 const NotFound = notFound("Not Found")
+const CrateNotFound = notFound("Crate Not Found")
 
 type notFound string
 
@@ -121,9 +122,13 @@ func GetCrate(start, name string) (*Crate, error) {
 		crateName = "default"
 	}
 
+	return openCrate(project, crateName)
+}
+
+func openCrate(project *Project, crateName string) (*Crate, error) {
 	crate, ok := project.Crates[crateName]
 	if !ok {
-		return nil, fmt.Errorf("Unknown crate: %s", crateName)
+		return nil, CrateNotFound
 	}
 
 	if crate.Hostname == "" {
@@ -136,6 +141,14 @@ func GetCrate(start, name string) (*Crate, error) {
 	log.Printf("Crate: %s, Image: %s", crateName, crate.Image)
 
 	return &crate, nil
+}
+
+func OpenCrate(projectName, crateName string) (*Crate, error) {
+	project, err := parse(projectName)
+	if err != nil {
+		return nil, err
+	}
+	return openCrate(project, crateName)
 }
 
 func (c *Crate) ProjectPath() string {

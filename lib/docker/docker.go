@@ -47,6 +47,13 @@ func (c *Connection) Close() error {
 	return c.c.Close()
 }
 
+func (c *Connection) List() ([]types.Container, error) {
+	return c.c.ContainerList(c.ctx, types.ContainerListOptions{
+		All:     true,
+		Filters: filters.NewArgs(filters.Arg("label", "me.qur.wharf-rat.project")),
+	})
+}
+
 func (c *Connection) GetContainer(name string) (*types.Container, error) {
 	containers, err := c.c.ContainerList(c.ctx, types.ContainerListOptions{
 		All:     true,
@@ -105,7 +112,9 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		Image:    crate.Image,
 		Hostname: crate.Hostname,
 		Labels: map[string]string{
-			"me.qur.wharf-rat.crate": crate.Json(),
+			"me.qur.wharf-rat.project": crate.ProjectPath(),
+			"me.qur.wharf-rat.crate":   crate.Name(),
+			"me.qur.wharf-rat.config":  crate.Json(),
 		},
 	}
 
@@ -154,7 +163,7 @@ func (c *Connection) EnsureRunning(crate *config.Crate) (string, error) {
 
 	log.Printf("FOUND %s %s", container.ID, container.State)
 
-	oldJson := container.Labels["me.qur.wharf-rat.crate"]
+	oldJson := container.Labels["me.qur.wharf-rat.config"]
 	if oldJson != crate.Json() {
 		return "", fmt.Errorf("Container built from old config")
 	}
