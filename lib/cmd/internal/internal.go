@@ -10,6 +10,7 @@ import (
 type options struct {
 	Proxy  `command:"proxy"`
 	Server `command:"server"`
+	Setup  `command:"setup"`
 	Debug  bool `short:"d" long:"debug" description:"Show debug output"`
 }
 

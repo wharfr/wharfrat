@@ -1,8 +1,10 @@
 package docker
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -86,29 +88,90 @@ func (c *Connection) Stop(id string) error {
 	return c.c.ContainerStop(c.ctx, id, nil)
 }
 
+func (c *Connection) setup(id string) error {
+	usr, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("Failed to get user information: %s", err)
+	}
+
+	group, err := user.LookupGroupId(usr.Gid)
+	if err != nil {
+		return fmt.Errorf("Failed to get group information: %s", err)
+	}
+
+	config := types.ExecConfig{
+		AttachStdin:  false,
+		AttachStdout: true,
+		AttachStderr: true,
+		Tty:          false,
+		User:         "root:root",
+		Cmd: []string{
+			"/sbin/wr-init", "setup", "--debug",
+			"--user", usr.Username, "--uid", usr.Uid, "--name", usr.Name,
+			"--group", group.Name, "--gid", group.Gid,
+		},
+	}
+
+	resp, err := c.c.ContainerExecCreate(c.ctx, id, config)
+	if err != nil {
+		return err
+	}
+
+	execID := resp.ID
+	if execID == "" {
+		return fmt.Errorf("Got empty exec ID")
+	}
+
+	startCheck := types.ExecStartCheck{
+		Tty: false,
+	}
+	attach, err := c.c.ContainerExecAttach(c.ctx, execID, startCheck)
+	if err != nil {
+		return err
+	}
+	defer attach.Close()
+
+	buf := &bytes.Buffer{}
+
+	outChan := make(chan error)
+	go func() {
+		_, err := stdcopy.StdCopy(ioutil.Discard, buf, attach.Reader)
+		log.Printf("Copy done")
+		outChan <- err
+	}()
+
+	// Wait for copies to finish
+	if err = <-outChan; err != nil {
+		return fmt.Errorf("Error copying output: %s", err)
+	}
+
+	log.Printf("Setup stderr: %s", buf)
+
+	inspect, err := c.c.ContainerExecInspect(c.ctx, execID)
+	if err != nil {
+		return fmt.Errorf("Failed to get exec response: %s", err)
+	}
+
+	if inspect.Running {
+		return fmt.Errorf("Setup command still running!")
+	}
+
+	if inspect.ExitCode != 0 {
+		return fmt.Errorf("Setup command failed (%d): %s", inspect.ExitCode, buf)
+	}
+
+	return nil
+}
+
 func (c *Connection) Create(crate *config.Crate) (string, error) {
 	self, err := os.Readlink("/proc/self/exe")
 	if err != nil {
 		return "", fmt.Errorf("Failed to get self: %s", err)
 	}
 
-	usr, err := user.Current()
-	if err != nil {
-		return "", fmt.Errorf("Failed to get user information: %s", err)
-	}
-
-	group, err := user.LookupGroupId(usr.Gid)
-	if err != nil {
-		return "", fmt.Errorf("Failed to get group information: %s", err)
-	}
-
 	config := &container.Config{
-		User: "root:root",
-		Cmd: []string{
-			"/sbin/wr-init", "server", "--debug",
-			"--user", usr.Username, "--uid", usr.Uid, "--name", usr.Name,
-			"--group", group.Name, "--gid", group.Gid,
-		},
+		User:     "root:root",
+		Cmd:      []string{"/sbin/wr-init", "server", "--debug"},
 		Image:    crate.Image,
 		Hostname: crate.Hostname,
 		Labels: map[string]string{
@@ -145,6 +208,10 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	cid := create.ID
 
 	if err := c.c.ContainerStart(c.ctx, cid, types.ContainerStartOptions{}); err != nil {
+		return "", err
+	}
+
+	if err := c.setup(cid); err != nil {
 		return "", err
 	}
 
