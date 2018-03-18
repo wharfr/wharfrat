@@ -9,6 +9,7 @@ import (
 
 	"git.qur.me/qur/wharf_rat/lib/config"
 	"git.qur.me/qur/wharf_rat/lib/docker"
+	"git.qur.me/qur/wharf_rat/lib/vc"
 )
 
 type List struct {
@@ -20,6 +21,8 @@ const (
 	green triState = iota
 	amber
 	red
+	normal
+	dark
 )
 
 type strState struct {
@@ -33,16 +36,21 @@ type listEntry struct {
 	crate   strState
 	image   string
 	state   string
+	branch  strState
 }
 
 func (t triState) fmt() string {
 	switch t {
 	case green:
-		return "\033[32;1m"
+		return "\033[32m"
 	case amber:
-		return "\033[33;1m"
+		return "\033[33m"
 	case red:
-		return "\033[31;1m"
+		return "\033[31m"
+	case normal:
+		return "\033[0m"
+	case dark:
+		return "\033[30;1m"
 	}
 	panic("Invalid triState")
 }
@@ -82,7 +90,7 @@ func (l *List) Execute(args []string) error {
 	log.Printf("FOUND: %d", len(containers))
 
 	entries := []listEntry{}
-	maxName, maxProject, maxCrate, maxImage := 0, 0, 0, 0
+	maxName, maxProject, maxBranch, maxCrate, maxImage := 14, 14, 14, 5, 5
 
 	for _, container := range containers {
 		projectFile := container.Labels["me.qur.wharf-rat.project"]
@@ -97,6 +105,18 @@ func (l *List) Execute(args []string) error {
 		crate, err := config.OpenCrate(projectFile, crateName)
 		if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
 			return fmt.Errorf("Failed to lookup crate: %s", err)
+		}
+
+		branchState := normal
+		branch, err := vc.Branch(project)
+		if err != nil {
+			log.Printf("Failed to get VC branch: %s", err)
+			branch = "<unknown>"
+			branchState = dark
+		}
+
+		if len(branch) > maxBranch {
+			maxBranch = len(branch)
 		}
 
 		projectState := green
@@ -133,16 +153,19 @@ func (l *List) Execute(args []string) error {
 			crate:   strState{crateName, crateState},
 			image:   container.Image,
 			state:   container.State,
+			branch:  strState{branch, branchState},
 		})
 	}
 
 	fmt.Printf("\033[37;1m%-*s\033[0m | ", maxName, "Container Name")
 	fmt.Printf("\033[37;1m%-*s\033[0m | ", maxProject, "Project Folder")
+	fmt.Printf("\033[37;1m%-*s\033[0m | ", maxBranch, "Project Branch")
 	fmt.Printf("\033[37;1m%-*s\033[0m | ", maxCrate, "Crate")
 	fmt.Printf("\033[37;1m%-*s\033[0m | ", maxImage, "Image")
 	fmt.Printf("\033[37;1m%s\033[0m\n", "Container State")
 	fmt.Printf("%s-+-", dashes(maxName))
 	fmt.Printf("%s-+-", dashes(maxProject))
+	fmt.Printf("%s-+-", dashes(maxBranch))
 	fmt.Printf("%s-+-", dashes(maxCrate))
 	fmt.Printf("%s-+-", dashes(maxImage))
 	fmt.Printf("%s\n", dashes(15))
@@ -150,6 +173,8 @@ func (l *List) Execute(args []string) error {
 		fmt.Printf("%-*s", maxName, entry.name)
 		fmt.Printf("\033[0m | ")
 		fmt.Printf("%s%-*s", entry.project.state.fmt(), maxProject, entry.project.str)
+		fmt.Printf("\033[0m | ")
+		fmt.Printf("%s%-*s", entry.branch.state.fmt(), maxBranch, entry.branch.str)
 		fmt.Printf("\033[0m | ")
 		fmt.Printf("%s%-*s", entry.crate.state.fmt(), maxCrate, entry.crate.str)
 		fmt.Printf("\033[0m | ")
