@@ -1,6 +1,7 @@
 package wr
 
 import (
+	"io/ioutil"
 	"log"
 
 	"git.qur.me/qur/wharf_rat/lib/config"
@@ -16,6 +17,7 @@ type Options struct {
 	Clean   bool   `long:"clean" description:"Rebuild container from Image"`
 	User    string `short:"u" long:"user" value-name:"USER[:GROUP]" description:"Override user/group for running command"`
 	Workdir string `short:"w" long:"workdir" value-name:"DIR" description:"Override working directory for running command"`
+	Debug   bool   `short:"d" long:"debug" description:"Show debug output"`
 }
 
 func stop(opts Options, args []string) int {
@@ -91,6 +93,11 @@ func Main() int {
 	} else if err != nil {
 		return 1
 	}
+
+	if !opts.Debug {
+		log.SetOutput(ioutil.Discard)
+	}
+
 	log.Printf("Args: %#v, Opts: %#v", args, opts)
 
 	if opts.Stop {
