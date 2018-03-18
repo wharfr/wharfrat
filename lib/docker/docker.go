@@ -13,12 +13,14 @@ import (
 	"syscall"
 
 	"git.qur.me/qur/wharf_rat/lib/config"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/docker/pkg/term"
 	"golang.org/x/net/context"
@@ -163,6 +165,24 @@ func (c *Connection) setup(id string) error {
 	return nil
 }
 
+func (c *Connection) pullImage(name string) error {
+	options := types.ImageCreateOptions{
+		Platform: "linux",
+	}
+
+	resp, err := c.c.ImageCreate(c.ctx, name, options)
+	if err != nil {
+		return err
+	}
+	defer resp.Close()
+
+	fd, term := term.GetFdInfo(os.Stderr)
+
+	log.Printf("PULL: image:%s fd:%d term:%v", name, fd, term)
+
+	return jsonmessage.DisplayJSONMessagesStream(resp, os.Stderr, fd, term, nil)
+}
+
 func (c *Connection) Create(crate *config.Crate) (string, error) {
 	self, err := os.Readlink("/proc/self/exe")
 	if err != nil {
@@ -201,8 +221,32 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	networkingConfig := &network.NetworkingConfig{}
 
-	create, err := c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, crate.ContainerName())
+	var namedRef reference.Named
+
+	ref, err := reference.ParseAnyReference(config.Image)
 	if err != nil {
+		return "", err
+	}
+	if named, ok := ref.(reference.Named); ok {
+		namedRef = reference.TagNameOnly(named)
+	}
+
+	log.Printf("IMAGE: %s %s %s", config.Image, namedRef, reference.FamiliarString(namedRef))
+
+	create, err := c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, crate.ContainerName())
+	if client.IsErrNotFound(err) && namedRef != nil {
+		fmt.Fprintf(os.Stderr, "Unable to find image '%s' locally\n", reference.FamiliarString(namedRef))
+
+		if err := c.pullImage(config.Image); err != nil {
+			return "", err
+		}
+
+		var retryErr error
+		create, retryErr = c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, crate.ContainerName())
+		if retryErr != nil {
+			return "", retryErr
+		}
+	} else if err != nil {
 		return "", err
 	}
 	cid := create.ID
