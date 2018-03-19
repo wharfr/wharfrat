@@ -113,26 +113,26 @@ func (l *List) Execute(args []string) error {
 			log.Printf("Failed to get VC branch: %s", err)
 		}
 
-		branchState := normal
 		projectState := green
+		if !exists(projectFile) {
+			projectState = red
+		}
+
+		branchState := normal
 		if branch == "" {
 			branch = "<unknown>"
 			branchState = dark
-			if !exists(projectFile) {
-				projectState = red
-			}
 		} else if branch != projectBranch {
-			log.Printf("OpenVcCrate: %s %s %s", projectFile, branch, crateName)
-			crate, err = config.OpenVcCrate(projectFile, branch, crateName)
-			if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
-				return fmt.Errorf("Failed to lookup crate: %s", err)
-			}
-			if !vc.KnownFile(projectFile, branch) {
+			if vc.KnownFile(projectFile, branch) {
+				log.Printf("OpenVcCrate: %s %s %s", projectFile, branch, crateName)
+				crate, err = config.OpenVcCrate(projectFile, branch, crateName)
+				if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
+					return fmt.Errorf("Failed to lookup crate: %s", err)
+				}
+				projectState = green
+			} else {
 				projectState = red
-			}
-		} else {
-			if !exists(projectFile) {
-				projectState = red
+				crate = nil
 			}
 		}
 
