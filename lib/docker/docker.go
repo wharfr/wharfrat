@@ -9,10 +9,12 @@ import (
 	"os"
 	"os/signal"
 	"os/user"
+	"path/filepath"
 	"strings"
 	"syscall"
 
 	"git.qur.me/qur/wharf_rat/lib/config"
+	"git.qur.me/qur/wharf_rat/lib/vc"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -189,16 +191,25 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		return "", fmt.Errorf("Failed to get self: %s", err)
 	}
 
+	labels := map[string]string{
+		"me.qur.wharf-rat.project": crate.ProjectPath(),
+		"me.qur.wharf-rat.crate":   crate.Name(),
+		"me.qur.wharf-rat.config":  crate.Json(),
+	}
+
+	projectDir := filepath.Dir(crate.ProjectPath())
+	if branch, err := vc.Branch(projectDir); err != nil {
+		log.Printf("Failed to get vc branch: %s", err)
+	} else {
+		labels["me.qur.wharf-rat.branch"] = branch
+	}
+
 	config := &container.Config{
 		User:     "root:root",
 		Cmd:      []string{"/sbin/wr-init", "server", "--debug"},
 		Image:    crate.Image,
 		Hostname: crate.Hostname,
-		Labels: map[string]string{
-			"me.qur.wharf-rat.project": crate.ProjectPath(),
-			"me.qur.wharf-rat.crate":   crate.Name(),
-			"me.qur.wharf-rat.config":  crate.Json(),
-		},
+		Labels:   labels,
 	}
 
 	tmpfs := make(map[string]string)

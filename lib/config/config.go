@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"git.qur.me/qur/wharf_rat/lib/vc"
+
 	"github.com/burntsushi/toml"
 )
 
@@ -22,6 +24,7 @@ type Crate struct {
 	Tmpfs       []string
 	projectPath string
 	name        string
+	branch      string
 }
 
 type Project struct {
@@ -53,6 +56,16 @@ func parse(path string) (*Project, error) {
 	log.Printf("Project File: %s", path)
 	log.Printf("Project: %#v", project)
 	project.path = path
+	return &project, nil
+}
+
+func parseStr(data string) (*Project, error) {
+	var project Project
+	_, err := toml.Decode(data, &project)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("Project: %#v", project)
 	return &project, nil
 }
 
@@ -122,10 +135,16 @@ func GetCrate(start, name string) (*Crate, error) {
 		crateName = "default"
 	}
 
-	return openCrate(project, crateName)
+	projectDir := filepath.Dir(project.path)
+	branch, err := vc.Branch(projectDir)
+	if err != nil {
+		log.Printf("Failed to get branch name: %s", err)
+	}
+
+	return openCrate(project, crateName, branch)
 }
 
-func openCrate(project *Project, crateName string) (*Crate, error) {
+func openCrate(project *Project, crateName, branch string) (*Crate, error) {
 	crate, ok := project.Crates[crateName]
 	if !ok {
 		return nil, CrateNotFound
@@ -137,18 +156,37 @@ func openCrate(project *Project, crateName string) (*Crate, error) {
 
 	crate.projectPath = project.path
 	crate.name = crateName
+	crate.branch = branch
 
 	log.Printf("Crate: %s, Image: %s", crateName, crate.Image)
 
 	return &crate, nil
 }
 
-func OpenCrate(projectName, crateName string) (*Crate, error) {
-	project, err := parse(projectName)
+func OpenCrate(projectPath, crateName string) (*Crate, error) {
+	project, err := parse(projectPath)
 	if err != nil {
 		return nil, err
 	}
-	return openCrate(project, crateName)
+	projectDir := filepath.Dir(projectPath)
+	branch, err := vc.Branch(projectDir)
+	if err != nil {
+		log.Printf("Failed to get branch name: %s", err)
+	}
+	return openCrate(project, crateName, branch)
+}
+
+func OpenVcCrate(projectPath, branch, crateName string) (*Crate, error) {
+	data, err := vc.BranchedFile(projectPath, branch)
+	if err != nil {
+		return nil, err
+	}
+	project, err := parseStr(data)
+	if err != nil {
+		return nil, err
+	}
+	project.path = projectPath
+	return openCrate(project, crateName, branch)
 }
 
 func (c *Crate) ProjectPath() string {
@@ -167,7 +205,11 @@ func (c *Crate) ContainerName() string {
 	}
 	_, err = h.Write([]byte(c.name))
 	if err != nil {
-		panic("Failed to write project path: " + err.Error())
+		panic("Failed to write crate name: " + err.Error())
+	}
+	_, err = h.Write([]byte(c.branch))
+	if err != nil {
+		panic("Failed to write crate branch: " + err.Error())
 	}
 	hash := hex.EncodeToString(h.Sum(nil))
 	return "wr_" + hash

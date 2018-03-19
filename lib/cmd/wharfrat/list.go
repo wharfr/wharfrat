@@ -90,12 +90,13 @@ func (l *List) Execute(args []string) error {
 	log.Printf("FOUND: %d", len(containers))
 
 	entries := []listEntry{}
-	maxName, maxProject, maxBranch, maxCrate, maxImage := 14, 14, 14, 5, 5
+	maxName, maxProject, maxBranch, maxCrate, maxImage := 14, 14, 16, 5, 5
 
 	for _, container := range containers {
 		projectFile := container.Labels["me.qur.wharf-rat.project"]
 		crateName := container.Labels["me.qur.wharf-rat.crate"]
 		cfg := container.Labels["me.qur.wharf-rat.config"]
+		branch := container.Labels["me.qur.wharf-rat.branch"]
 
 		name := container.Names[0]
 		if strings.HasPrefix(name, "/") {
@@ -107,21 +108,36 @@ func (l *List) Execute(args []string) error {
 			return fmt.Errorf("Failed to lookup crate: %s", err)
 		}
 
-		branchState := normal
-		branch, err := vc.Branch(project)
+		projectBranch, err := vc.Branch(project)
 		if err != nil {
 			log.Printf("Failed to get VC branch: %s", err)
+		}
+
+		branchState := normal
+		projectState := green
+		if branch == "" {
 			branch = "<unknown>"
 			branchState = dark
+			if !exists(projectFile) {
+				projectState = red
+			}
+		} else if branch != projectBranch {
+			log.Printf("OpenVcCrate: %s %s %s", projectFile, branch, crateName)
+			crate, err = config.OpenVcCrate(projectFile, branch, crateName)
+			if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
+				return fmt.Errorf("Failed to lookup crate: %s", err)
+			}
+			if !vc.KnownFile(projectFile, branch) {
+				projectState = red
+			}
+		} else {
+			if !exists(projectFile) {
+				projectState = red
+			}
 		}
 
 		if len(branch) > maxBranch {
 			maxBranch = len(branch)
-		}
-
-		projectState := green
-		if !exists(projectFile) {
-			projectState = red
 		}
 
 		crateState := green
@@ -159,7 +175,7 @@ func (l *List) Execute(args []string) error {
 
 	fmt.Printf("\033[37;1m%-*s\033[0m | ", maxName, "Container Name")
 	fmt.Printf("\033[37;1m%-*s\033[0m | ", maxProject, "Project Folder")
-	fmt.Printf("\033[37;1m%-*s\033[0m | ", maxBranch, "Project Branch")
+	fmt.Printf("\033[37;1m%-*s\033[0m | ", maxBranch, "Container Branch")
 	fmt.Printf("\033[37;1m%-*s\033[0m | ", maxCrate, "Crate")
 	fmt.Printf("\033[37;1m%-*s\033[0m | ", maxImage, "Image")
 	fmt.Printf("\033[37;1m%s\033[0m\n", "Container State")
