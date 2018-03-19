@@ -13,7 +13,8 @@ func Branch(path string) (string, error) {
 	log.Printf("VC BRANCH: %s", path)
 	buf := &bytes.Buffer{}
 	errBuf := &bytes.Buffer{}
-	cmd := exec.Command("git", "-C", path, "symbolic-ref", "--short", "HEAD")
+	cmd := exec.Command("git", "symbolic-ref", "--short", "HEAD")
+	cmd.Dir = path
 	cmd.Stdout = buf
 	cmd.Stderr = errBuf
 	if err := cmd.Run(); err != nil {
@@ -28,7 +29,8 @@ func BranchedFile(path, branch string) (string, error) {
 	log.Printf("VC BRANCHED FILE: %s", path)
 	buf := &bytes.Buffer{}
 	errBuf := &bytes.Buffer{}
-	cmd := exec.Command("git", "-C", dirPath, "show", branch+":./"+fileName)
+	cmd := exec.Command("git", "show", branch+":./"+fileName)
+	cmd.Dir = dirPath
 	cmd.Stdout = buf
 	cmd.Stderr = errBuf
 	if err := cmd.Run(); err != nil {
@@ -43,7 +45,8 @@ func KnownFile(path, branch string) bool {
 	log.Printf("VC BRANCHED FILE: %s", path)
 	buf := &bytes.Buffer{}
 	errBuf := &bytes.Buffer{}
-	cmd := exec.Command("git", "-C", dirPath, "cat-file", "-t", branch+":./"+fileName)
+	cmd := exec.Command("git", "cat-file", "-t", branch+":./"+fileName)
+	cmd.Dir = dirPath
 	cmd.Stdout = buf
 	cmd.Stderr = errBuf
 	if err := cmd.Run(); err != nil {
