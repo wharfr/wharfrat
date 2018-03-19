@@ -12,6 +12,7 @@ type options struct {
 	Start  `command:"start"`
 	Stop   `command:"stop"`
 	Remove `command:"remove"`
+	Rm     Remove `command:"rm"`
 	Debug  bool `short:"d" long:"debug" description:"Show debug output"`
 }
 
