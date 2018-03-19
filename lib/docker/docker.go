@@ -455,6 +455,8 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		return -1, fmt.Errorf("Got empty exec ID")
 	}
 
+	log.Printf("EXEC: ID=%s", execID)
+
 	startCheck := types.ExecStartCheck{
 		Tty: inTerm,
 	}
@@ -491,18 +493,25 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 			outChan <- err
 		}()
 
-		resizeTty := func() {
+		resizeTty := func() error {
 			size, err := term.GetWinsize(inFd)
-			if (size.Height == 0 && size.Width == 0) || err != nil {
-				return
+			log.Printf("Resize: size=%v err=%s id=%s", size, err, execID)
+			if err != nil {
+				return err
 			}
-			c.c.ContainerExecResize(c.ctx, execID, types.ResizeOptions{
+			err = c.c.ContainerExecResize(c.ctx, execID, types.ResizeOptions{
 				Height: uint(size.Height),
 				Width:  uint(size.Width),
 			})
+			log.Printf("Resize result: %s", err)
+			return err
 		}
 
-		resizeTty()
+		go func() {
+			log.Printf("Initial Resize")
+			for resizeTty() != nil {
+			}
+		}()
 
 		go func() {
 			sigchan := make(chan os.Signal, 1)
