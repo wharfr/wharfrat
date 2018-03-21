@@ -22,6 +22,7 @@ type Crate struct {
 	Volumes     []string
 	Hostname    string
 	Tmpfs       []string
+	Groups      []string
 	projectPath string
 	name        string
 	branch      string

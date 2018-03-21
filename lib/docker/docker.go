@@ -92,7 +92,7 @@ func (c *Connection) Stop(id string) error {
 	return c.c.ContainerStop(c.ctx, id, nil)
 }
 
-func (c *Connection) setup(id string) error {
+func (c *Connection) setup(id string, crate *config.Crate) error {
 	usr, err := user.Current()
 	if err != nil {
 		return fmt.Errorf("Failed to get user information: %s", err)
@@ -103,17 +103,23 @@ func (c *Connection) setup(id string) error {
 		return fmt.Errorf("Failed to get group information: %s", err)
 	}
 
+	cmd := []string{
+		"/sbin/wr-init", "setup", "--debug",
+		"--user", usr.Username, "--uid", usr.Uid, "--name", usr.Name,
+		"--group", group.Name, "--gid", group.Gid,
+	}
+
+	for _, group := range crate.Groups {
+		cmd = append(cmd, "--extra-group", group)
+	}
+
 	config := types.ExecConfig{
 		AttachStdin:  false,
 		AttachStdout: true,
 		AttachStderr: true,
 		Tty:          false,
 		User:         "root:root",
-		Cmd: []string{
-			"/sbin/wr-init", "setup", "--debug",
-			"--user", usr.Username, "--uid", usr.Uid, "--name", usr.Name,
-			"--group", group.Name, "--gid", group.Gid,
-		},
+		Cmd:          cmd,
 	}
 
 	resp, err := c.c.ContainerExecCreate(c.ctx, id, config)
@@ -266,7 +272,8 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		return "", err
 	}
 
-	if err := c.setup(cid); err != nil {
+	if err := c.setup(cid, crate); err != nil {
+		c.EnsureRemoved(crate.ContainerName())
 		return "", err
 	}
 
