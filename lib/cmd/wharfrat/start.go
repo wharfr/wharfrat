@@ -11,7 +11,8 @@ import (
 )
 
 type Start struct {
-	All bool `short:"a" long:"all"`
+	All   bool `short:"a" long:"all"`
+	Force bool `long:"force" decription:"Ignore out of date crate configuration"`
 }
 
 func (s *Start) Execute(args []string) error {
@@ -64,7 +65,7 @@ func (s *Start) Execute(args []string) error {
 				fmt.Printf("Failed to start %s: crate config mising\n", name)
 				continue
 			}
-			if _, err := client.EnsureRunning(crate); err != nil {
+			if _, err := client.EnsureRunning(crate, s.Force); err != nil {
 				fmt.Printf("Failed to start %s: %s\n", name, err)
 			} else {
 				fmt.Printf("%s started\n", name)

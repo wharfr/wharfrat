@@ -20,6 +20,7 @@ type Options struct {
 	User    string `short:"u" long:"user" value-name:"USER[:GROUP]" description:"Override user/group for running command"`
 	Workdir string `short:"w" long:"workdir" value-name:"DIR" description:"Override working directory for running command"`
 	Debug   bool   `short:"d" long:"debug" description:"Show debug output"`
+	Force   bool   `long:"force" decription:"Ignore out of date crate configuration"`
 }
 
 func fatal(msg string, args ...interface{}) int {
@@ -72,7 +73,7 @@ func client(opts Options, args []string) int {
 		}
 	}
 
-	container, err := c.EnsureRunning(crate)
+	container, err := c.EnsureRunning(crate, opts.Force)
 	if err != nil {
 		return fatal("Failed to run container: %s", err)
 	}

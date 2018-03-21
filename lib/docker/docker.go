@@ -273,7 +273,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	return cid, nil
 }
 
-func (c *Connection) EnsureRunning(crate *config.Crate) (string, error) {
+func (c *Connection) EnsureRunning(crate *config.Crate, force bool) (string, error) {
 	container, err := c.GetContainer(crate.ContainerName())
 	if err != nil {
 		return "", fmt.Errorf("Failed to get docker container: %s", err)
@@ -286,7 +286,7 @@ func (c *Connection) EnsureRunning(crate *config.Crate) (string, error) {
 	log.Printf("FOUND %s %s", container.ID, container.State)
 
 	oldJson := container.Labels["me.qur.wharf-rat.config"]
-	if oldJson != crate.Json() {
+	if oldJson != crate.Json() && !force {
 		return "", fmt.Errorf("Container built from old config")
 	}
 
