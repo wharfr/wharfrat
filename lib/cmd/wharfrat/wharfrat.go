@@ -9,6 +9,7 @@ import (
 
 type options struct {
 	List   `command:"list"`
+	Run    `command:"run"`
 	Start  `command:"start"`
 	Stop   `command:"stop"`
 	Remove `command:"remove"`
