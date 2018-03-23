@@ -15,6 +15,7 @@ type options struct {
 	Remove `command:"remove"`
 	Rm     Remove `command:"rm"`
 	Login  `command:"login"`
+	Logout `command:"logout"`
 	Debug  bool `short:"d" long:"debug" description:"Show debug output"`
 }
 

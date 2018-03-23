@@ -288,6 +288,10 @@ func (a Auth) Set(authConfig *types.AuthConfig) error {
 	return nil
 }
 
+func (a Auth) Clear(name string) {
+	delete(a, name)
+}
+
 func (a Auth) Save() error {
 	f, err := configDir().Create(authFilename)
 	if err != nil {
