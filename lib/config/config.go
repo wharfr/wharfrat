@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"crypto/md5"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -15,6 +16,8 @@ import (
 	"git.qur.me/qur/wharf_rat/lib/vc"
 
 	"github.com/burntsushi/toml"
+	"github.com/docker/docker/api/types"
+	"github.com/shibukawa/configdir"
 )
 
 type Crate struct {
@@ -232,4 +235,65 @@ func (c *Crate) Hash() string {
 		panic("Failed to encode crate to JSON: " + err.Error())
 	}
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func configDir() *configdir.Config {
+	configDirs := configdir.New("", "wharf-rat")
+
+	folders := configDirs.QueryFolders(configdir.Global)
+	log.Printf("CONFIG FOLDERS: %v", folders)
+	return folders[0]
+}
+
+func save(filename string, data interface{}) error {
+	content, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	return configDir().WriteFile(filename, content)
+}
+
+func load(filename string, data interface{}) error {
+	content, err := configDir().ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(content, data)
+}
+
+const authFilename = "auth.json"
+
+type Auth map[string]string
+
+func LoadAuth() (Auth, error) {
+	auth := Auth{}
+
+	if err := load(authFilename, &auth); err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	return auth, nil
+}
+
+func (a Auth) Set(authConfig *types.AuthConfig) error {
+	buf, err := json.Marshal(authConfig)
+	if err != nil {
+		return err
+	}
+	addr := authConfig.ServerAddress
+	a[addr] = base64.URLEncoding.EncodeToString(buf)
+	log.Printf("AUTH SET: Addr: %s, Encoded: %s\n", addr, a[addr])
+	return nil
+}
+
+func (a Auth) Save() error {
+	f, err := configDir().Create(authFilename)
+	if err != nil {
+		return err
+	}
+	e := json.NewEncoder(f)
+	e.SetIndent("", "  ")
+	return e.Encode(a)
 }

@@ -15,6 +15,7 @@ import (
 
 	"git.qur.me/qur/wharf_rat/lib/config"
 	"git.qur.me/qur/wharf_rat/lib/vc"
+
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -25,6 +26,7 @@ import (
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/docker/pkg/term"
+	"github.com/docker/docker/registry"
 	"golang.org/x/net/context"
 )
 
@@ -174,8 +176,26 @@ func (c *Connection) setup(id string, crate *config.Crate) error {
 }
 
 func (c *Connection) pullImage(name string) error {
+	ref, err := reference.ParseNormalizedNamed(name)
+	if err != nil {
+		return err
+	}
+
+	repoInfo, err := registry.ParseRepositoryInfo(ref)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("REF: %v REG: %v", ref, repoInfo)
+
+	auth, err := config.LoadAuth()
+	if err != nil {
+		log.Printf("Failed to load saved auth: %s", err)
+	}
+
 	options := types.ImageCreateOptions{
-		Platform: "linux",
+		RegistryAuth: auth[repoInfo.Index.Name],
+		Platform:     "linux",
 	}
 
 	resp, err := c.c.ImageCreate(c.ctx, name, options)
@@ -550,4 +570,25 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	}
 
 	return inspect.ExitCode, nil
+}
+
+func (c *Connection) Login(addr, user, pass string) (*types.AuthConfig, error) {
+	authConfig := types.AuthConfig{
+		ServerAddress: addr,
+		Username:      user,
+		Password:      pass,
+	}
+
+	resp, err := c.c.RegistryLogin(c.ctx, authConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("LOGIN: token=%s, status=%s", resp.IdentityToken, resp.Status)
+
+	if resp.Status != "" {
+		fmt.Println(resp.Status)
+	}
+
+	return &authConfig, nil
 }
