@@ -81,8 +81,6 @@ func (l *Login) Execute(args []string) error {
 		return err
 	}
 
-	// TODO(jp3): save login details ...
-
 	auth, err := config.LoadAuth()
 	if err != nil {
 		return err
