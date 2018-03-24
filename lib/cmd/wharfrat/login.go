@@ -67,6 +67,10 @@ func (l *Login) Execute(args []string) error {
 
 	log.Printf("LOGIN: %s", server)
 
+	if server == "" {
+		return fmt.Errorf("Server required")
+	}
+
 	username := l.User
 	password := l.Pass
 
@@ -90,10 +94,6 @@ func (l *Login) Execute(args []string) error {
 
 	if password == "" {
 		return fmt.Errorf("Password required")
-	}
-
-	if server == "" {
-		return fmt.Errorf("Server required")
 	}
 
 	log.Printf("LOGIN: user=%s, server=%s", username, server)
