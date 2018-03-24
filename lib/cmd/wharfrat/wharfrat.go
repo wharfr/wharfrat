@@ -8,14 +8,14 @@ import (
 )
 
 type options struct {
-	List   `command:"list"`
-	Run    `command:"run"`
-	Start  `command:"start"`
-	Stop   `command:"stop"`
-	Remove `command:"remove"`
-	Rm     Remove `command:"rm"`
-	Login  `command:"login"`
-	Logout `command:"logout"`
+	List   `command:"list" description:"List existing containers"`
+	Run    `command:"run" description:"Run a command in a container"`
+	Start  `command:"start" description:"Start an existing container"`
+	Stop   `command:"stop" description:"Stop an existing container"`
+	Remove `command:"remove" description:"Remove an existing container"`
+	Rm     Remove `command:"rm" description:"Remove an existing container"`
+	Login  `command:"login" description:"Cache credentials for a registry"`
+	Logout `command:"logout" description:"Drop credentials for a registry"`
 	Debug  bool `short:"d" long:"debug" description:"Show debug output"`
 }
 

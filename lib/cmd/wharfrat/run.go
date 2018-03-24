@@ -2,7 +2,6 @@ package wharfrat
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -12,12 +11,10 @@ import (
 
 type Run struct {
 	Stop    bool   `short:"s" long:"stop" description:"Stop contiainer instead of running command"`
-	Verbose bool   `short:"v" long:"verbose"`
 	Crate   string `short:"c" long:"crate" value-name:"NAME" description:"Name of crate to run"`
 	Clean   bool   `long:"clean" description:"Rebuild container from Image"`
 	User    string `short:"u" long:"user" value-name:"USER[:GROUP]" description:"Override user/group for running command"`
 	Workdir string `short:"w" long:"workdir" value-name:"DIR" description:"Override working directory for running command"`
-	Debug   bool   `short:"d" long:"debug" description:"Show debug output"`
 	Force   bool   `long:"force" description:"Ignore out of date crate configuration"`
 }
 
@@ -83,11 +80,11 @@ func (opts *Run) client(args []string) (int, error) {
 	return ret, nil
 }
 
-func (r *Run) Execute(args []string) error {
-	if !r.Debug {
-		log.SetOutput(ioutil.Discard)
-	}
+func (r *Run) Usage() string {
+	return "[run-OPTIONS] [cmd [args...]]"
+}
 
+func (r *Run) Execute(args []string) error {
 	log.Printf("Args: %#v, Opts: %#v", args, r)
 
 	if r.Stop {
