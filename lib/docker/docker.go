@@ -592,3 +592,7 @@ func (c *Connection) Login(addr, user, pass string) (*types.AuthConfig, error) {
 
 	return &authConfig, nil
 }
+
+func (c *Connection) Info() (types.Info, error) {
+	return c.c.Info(c.ctx)
+}

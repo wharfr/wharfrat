@@ -3,21 +3,23 @@ package wharfrat
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 
 	"git.qur.me/qur/wharf_rat/lib/config"
 	"git.qur.me/qur/wharf_rat/lib/docker"
 	"github.com/docker/docker/pkg/term"
+	"github.com/docker/docker/registry"
 )
 
 type Login struct {
-	Args loginArgs `positional-args:"true" required:"true"`
+	Args loginArgs `positional-args:"true"`
 	User string    `short:"u" long:"user" description:"Username"`
 	Pass string    `short:"p" long:"password" description:"Password"`
 }
 
 type loginArgs struct {
-	Server string `positional-arg-name:"server" required:"true"`
+	Server string `positional-arg-name:"server"`
 }
 
 func getInput(prompt string) string {
@@ -51,6 +53,20 @@ func (l *Login) Execute(args []string) error {
 	}
 	defer client.Close()
 
+	server := l.Args.Server
+
+	if server == "" {
+		info, err := client.Info()
+		if err != nil {
+			return err
+		}
+		server = info.IndexServerAddress
+	}
+
+	server = registry.ConvertToHostname(server)
+
+	log.Printf("LOGIN: %s", server)
+
 	username := l.User
 	password := l.Pass
 
@@ -76,7 +92,13 @@ func (l *Login) Execute(args []string) error {
 		return fmt.Errorf("Password required")
 	}
 
-	authConfig, err := client.Login(l.Args.Server, username, password)
+	if server == "" {
+		return fmt.Errorf("Server required")
+	}
+
+	log.Printf("LOGIN: user=%s, server=%s", username, server)
+
+	authConfig, err := client.Login(server, username, password)
 	if err != nil {
 		return err
 	}
