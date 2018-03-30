@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -51,6 +52,14 @@ func (c *Connection) setupUser(id string, crate *config.Crate) error {
 }
 
 func (c *Connection) setupPrep(id string, crate *config.Crate) error {
+	cmd := exec.Command("/bin/bash")
+	cmd.Stdin = strings.NewReader(crate.SetupPrep)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Dir = filepath.Dir(crate.ProjectPath())
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("Setup prep script failed: %s", err)
+	}
 	return nil
 }
 
@@ -64,13 +73,13 @@ func (c *Connection) runScript(id, label, script string) error {
 
 	exitCode, err := c.run(id, cmd, stdin, os.Stdout, os.Stderr)
 	if err != nil {
-		return err
+		return fmt.Errorf("Setup %s script failed: %s", label, err)
 	}
 
 	log.Printf("SETUP %s: %d", label, exitCode)
 
 	if exitCode != 0 {
-		return fmt.Errorf("Setup %s script failed: %d", label, exitCode)
+		return fmt.Errorf("Setup %s script failed: exit status %d", label, exitCode)
 	}
 
 	return nil
