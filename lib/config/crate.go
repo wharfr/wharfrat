@@ -21,6 +21,10 @@ type Crate struct {
 	Hostname    string
 	Tmpfs       []string
 	Groups      []string
+	SetupPrep   string `toml:"setup-prep"`
+	SetupPre    string `toml:"setup-pre"`
+	SetupPost   string `toml:"setup-post"`
+	Tarballs    map[string]string
 	projectPath string
 	name        string
 	branch      string

@@ -125,6 +125,48 @@ func (c *Connection) setup(id string, crate *config.Crate) error {
 		return fmt.Errorf("Setup command failed (%d): %s", exitCode, buf)
 	}
 
+	if crate.SetupPre != "" {
+		cmd := []string{"/bin/bash"}
+		script := strings.NewReader(crate.SetupPre)
+		exitCode, err := c.run(id, cmd, script, os.Stdout, os.Stderr)
+		if err != nil {
+			return err
+		}
+		log.Printf("SETUP PRE: %d", exitCode)
+	}
+
+	for src, dst := range crate.Tarballs {
+		if !filepath.IsAbs(src) {
+			base := filepath.Dir(crate.ProjectPath())
+			src = filepath.Join(base, src)
+		}
+		if !filepath.IsAbs(dst) {
+			return fmt.Errorf("Tarball dest '%s' should be absolute path", dst)
+		}
+		log.Printf("INSTALL TARBALL: %s -> %s", src, dst)
+		f, err := os.Open(src)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		options := types.CopyToContainerOptions{
+		//CopyUIDGID: true,
+		}
+		if err := c.c.CopyToContainer(c.ctx, id, dst, f, options); err != nil {
+			return err
+		}
+	}
+
+	if crate.SetupPost != "" {
+		cmd := []string{"/bin/bash"}
+		script := strings.NewReader(crate.SetupPost)
+		exitCode, err := c.run(id, cmd, script, os.Stdout, os.Stderr)
+		if err != nil {
+			return err
+		}
+		log.Printf("SETUP POST: %d", exitCode)
+	}
+
 	return nil
 }
 

@@ -16,10 +16,11 @@ const NotFound = notFound("Not Found")
 
 func parse(path string) (*Project, error) {
 	var project Project
-	_, err := toml.DecodeFile(path, &project)
+	md, err := toml.DecodeFile(path, &project)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("Unknown config keys: %s", md.Undecoded())
 	log.Printf("Project File: %s", path)
 	log.Printf("Project: %#v", project)
 	project.path = path
