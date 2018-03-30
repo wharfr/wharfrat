@@ -1,13 +1,11 @@
 package docker
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/signal"
-	"os/user"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -89,85 +87,6 @@ func (c *Connection) Unpause(id string) error {
 
 func (c *Connection) Stop(id string) error {
 	return c.c.ContainerStop(c.ctx, id, nil)
-}
-
-func (c *Connection) setup(id string, crate *config.Crate) error {
-	usr, err := user.Current()
-	if err != nil {
-		return fmt.Errorf("Failed to get user information: %s", err)
-	}
-
-	group, err := user.LookupGroupId(usr.Gid)
-	if err != nil {
-		return fmt.Errorf("Failed to get group information: %s", err)
-	}
-
-	cmd := []string{
-		"/sbin/wr-init", "setup", "--debug",
-		"--user", usr.Username, "--uid", usr.Uid, "--name", usr.Name,
-		"--group", group.Name, "--gid", group.Gid,
-	}
-
-	for _, group := range crate.Groups {
-		cmd = append(cmd, "--extra-group", group)
-	}
-
-	buf := &bytes.Buffer{}
-
-	exitCode, err := c.run(id, cmd, nil, nil, buf)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("Setup stderr: %s", buf)
-
-	if exitCode != 0 {
-		return fmt.Errorf("Setup command failed (%d): %s", exitCode, buf)
-	}
-
-	if crate.SetupPre != "" {
-		cmd := []string{"/bin/bash"}
-		script := strings.NewReader(crate.SetupPre)
-		exitCode, err := c.run(id, cmd, script, os.Stdout, os.Stderr)
-		if err != nil {
-			return err
-		}
-		log.Printf("SETUP PRE: %d", exitCode)
-	}
-
-	for src, dst := range crate.Tarballs {
-		if !filepath.IsAbs(src) {
-			base := filepath.Dir(crate.ProjectPath())
-			src = filepath.Join(base, src)
-		}
-		if !filepath.IsAbs(dst) {
-			return fmt.Errorf("Tarball dest '%s' should be absolute path", dst)
-		}
-		log.Printf("INSTALL TARBALL: %s -> %s", src, dst)
-		f, err := os.Open(src)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		options := types.CopyToContainerOptions{
-		//CopyUIDGID: true,
-		}
-		if err := c.c.CopyToContainer(c.ctx, id, dst, f, options); err != nil {
-			return err
-		}
-	}
-
-	if crate.SetupPost != "" {
-		cmd := []string{"/bin/bash"}
-		script := strings.NewReader(crate.SetupPost)
-		exitCode, err := c.run(id, cmd, script, os.Stdout, os.Stderr)
-		if err != nil {
-			return err
-		}
-		log.Printf("SETUP POST: %d", exitCode)
-	}
-
-	return nil
 }
 
 func (c *Connection) Create(crate *config.Crate) (string, error) {
