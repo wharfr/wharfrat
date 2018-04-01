@@ -14,6 +14,7 @@ type options struct {
 	Stop   `command:"stop" description:"Stop an existing container"`
 	Remove `command:"remove" description:"Remove an existing container"`
 	Rm     Remove `command:"rm" description:"Remove an existing container"`
+	Prune  `command:"prune" description:"Remove containers for non-existent crates"`
 	Login  `command:"login" description:"Cache credentials for a registry"`
 	Logout `command:"logout" description:"Drop credentials for a registry"`
 	Debug  bool `short:"d" long:"debug" description:"Show debug output"`
