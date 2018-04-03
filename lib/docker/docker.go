@@ -125,12 +125,21 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		}
 	}
 
+	binds := []string{
+		"/home:/home",
+		"/tmp/.X11-unix:/tmp/.X11-unix",
+		self + ":/sbin/wr-init:ro",
+	}
+
+	if crate.ProjectMount != "" {
+		pdir := filepath.Dir(crate.ProjectPath())
+		binds = append(binds, pdir+":"+crate.ProjectMount)
+	}
+
+	log.Printf("BINDS: %v", binds)
+
 	hostConfig := &container.HostConfig{
-		Binds: []string{
-			"/home:/home",
-			"/tmp/.X11-unix:/tmp/.X11-unix",
-			self + ":/sbin/wr-init:ro",
-		},
+		Binds: binds,
 		Tmpfs: tmpfs,
 	}
 

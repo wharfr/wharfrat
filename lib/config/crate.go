@@ -16,18 +16,19 @@ import (
 )
 
 type Crate struct {
-	Image       string
-	Volumes     []string
-	Hostname    string
-	Tmpfs       []string
-	Groups      []string
-	SetupPrep   string `toml:"setup-prep"`
-	SetupPre    string `toml:"setup-pre"`
-	SetupPost   string `toml:"setup-post"`
-	Tarballs    map[string]string
-	projectPath string
-	name        string
-	branch      string
+	Image        string
+	Volumes      []string
+	Hostname     string
+	Tmpfs        []string
+	Groups       []string
+	SetupPrep    string `toml:"setup-prep"`
+	SetupPre     string `toml:"setup-pre"`
+	SetupPost    string `toml:"setup-post"`
+	Tarballs     map[string]string
+	ProjectMount string `toml:"project-mount"`
+	projectPath  string
+	name         string
+	branch       string
 }
 
 const CrateNotFound = notFound("Crate Not Found")
