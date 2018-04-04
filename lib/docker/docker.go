@@ -294,13 +294,47 @@ func (c *Connection) EnsureRemoved(name string) error {
 	})
 }
 
-func (c *Connection) calcWorkdir(id, user, workdir string) (string, error) {
+func (c *Connection) calcWorkdir(id, user, workdir string, crate *config.Crate) (string, error) {
 	if strings.HasPrefix(workdir, "/") {
 		return workdir, nil
 	}
+	parts := strings.SplitN(workdir, ",", 2)
+	workdir = strings.TrimSpace(parts[0])
+	wd, err := c.calcWorkdirSingle(id, user, workdir, crate)
+	if err == nil {
+		return wd, nil
+	}
+	log.Printf("Calculate Working Dir: '%s' failed: %s", workdir, err)
+	next := strings.TrimSpace(parts[1])
+	if next == "" {
+		return "", err
+	}
+	return c.calcWorkdir(id, user, next, crate)
+}
+
+func (c *Connection) calcWorkdirSingle(id, user, workdir string, crate *config.Crate) (string, error) {
+	log.Printf("Calculate Working Dir: id=%s user=%s workdir=%s", id, user, workdir)
 	switch workdir {
 	case "", "match":
 		return os.Getwd()
+	case "project":
+		if crate.ProjectMount == "" {
+			return "", fmt.Errorf("project-mount not set")
+		}
+		project := filepath.Dir(crate.ProjectPath())
+		local, err := os.Getwd()
+		if err != nil {
+			return "", err
+		}
+		rel, err := filepath.Rel(project, local)
+		if err != nil {
+			return "", err
+		}
+		log.Printf("REL: %s %s", rel, local)
+		if strings.HasPrefix(rel, "../") {
+			return "", fmt.Errorf("Current path is not inside project")
+		}
+		return filepath.Join(crate.ProjectMount, rel), nil
 	case "home":
 		if idx := strings.Index(user, ":"); idx >= 0 {
 			user = user[:idx]
@@ -362,7 +396,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	}
 
 	if workdir == "" {
-		workdir, err = c.calcWorkdir(id, user, crate.WorkingDir)
+		workdir, err = c.calcWorkdir(id, user, crate.WorkingDir, crate)
 		if err != nil {
 			return -1, fmt.Errorf("Failed to set working directory: %s", err)
 		}
