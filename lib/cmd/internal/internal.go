@@ -8,10 +8,11 @@ import (
 )
 
 type options struct {
-	Proxy  `command:"proxy"`
-	Server `command:"server"`
-	Setup  `command:"setup"`
-	Debug  bool `short:"d" long:"debug" description:"Show debug output"`
+	Proxy   `command:"proxy"`
+	Server  `command:"server"`
+	Setup   `command:"setup"`
+	Homedir `command:"homedir"`
+	Debug   bool `short:"d" long:"debug" description:"Show debug output"`
 }
 
 func Main() int {

@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -293,6 +294,32 @@ func (c *Connection) EnsureRemoved(name string) error {
 	})
 }
 
+func (c *Connection) calcWorkdir(id, user, workdir string) (string, error) {
+	if strings.HasPrefix(workdir, "/") {
+		return workdir, nil
+	}
+	switch workdir {
+	case "", "match":
+		return os.Getwd()
+	case "home":
+		if idx := strings.Index(user, ":"); idx >= 0 {
+			user = user[:idx]
+		}
+		cmd := []string{"/sbin/wr-init", "homedir", user}
+		stdout := &bytes.Buffer{}
+		stderr := &bytes.Buffer{}
+		exit, err := c.run(id, cmd, nil, stdout, stderr)
+		if err != nil {
+			return "", err
+		}
+		if exit != 0 {
+			return "", fmt.Errorf("Failed to get home directory for %s: %s", user, stderr.String())
+		}
+		return string(bytes.TrimSpace(stdout.Bytes())), nil
+	}
+	return "", fmt.Errorf("Invalid working-dir: '%s'", workdir)
+}
+
 func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user, workdir string) (int, error) {
 	container, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
 	if err != nil {
@@ -335,9 +362,9 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	}
 
 	if workdir == "" {
-		workdir, err = os.Getwd()
+		workdir, err = c.calcWorkdir(id, user, crate.WorkingDir)
 		if err != nil {
-			return -1, fmt.Errorf("Failed to get current directory: %s", err)
+			return -1, fmt.Errorf("Failed to set working directory: %s", err)
 		}
 	}
 

@@ -78,7 +78,7 @@ func (c *Connection) run(id string, cmd []string, stdin io.Reader, stdout, stder
 	}
 
 	if inspect.Running {
-		return 0, fmt.Errorf("Setup command still running!")
+		return 0, fmt.Errorf("Container command (%s) still running", cmd[0])
 	}
 
 	return inspect.ExitCode, nil
