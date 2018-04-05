@@ -12,6 +12,7 @@ type options struct {
 	Server  `command:"server"`
 	Setup   `command:"setup"`
 	Homedir `command:"homedir"`
+	Version `command:"version"`
 	Debug   bool `short:"d" long:"debug" description:"Show debug output"`
 }
 

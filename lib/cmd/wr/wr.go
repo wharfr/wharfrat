@@ -7,13 +7,15 @@ import (
 	"os"
 
 	"git.qur.me/qur/wharf_rat/lib/cmd/wharfrat"
+	"git.qur.me/qur/wharf_rat/lib/version"
 
 	flags "github.com/jessevdk/go-flags"
 )
 
 type options struct {
 	wharfrat.Run
-	Debug bool `short:"d" long:"debug" description:"Show debug output"`
+	Debug   bool `short:"d" long:"debug" description:"Show debug output"`
+	Version bool `long:"version" description:"Show version of tool"`
 }
 
 func fatal(msg string, args ...interface{}) int {
@@ -39,6 +41,13 @@ func Main() int {
 
 	if !opts.Debug {
 		log.SetOutput(ioutil.Discard)
+	}
+
+	if opts.Version {
+		if err := version.ShowVersion(); err != nil {
+			return fatal("%s", err)
+		}
+		return 0
 	}
 
 	if err := opts.Execute(args); err != nil {

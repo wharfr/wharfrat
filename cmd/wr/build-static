@@ -1,2 +1,7 @@
 #!/bin/bash
-CGO_ENABLED=0 go build -a -tags netgo -installsuffix .
+ver=$(
+cat << EOF | base64 -w 0
+{"version":"$(git describe --all --long)","goversion":"$(go version)","buildtime":"$(date --utc +%Y-%m-%dT%H:%M:%SZ)"}
+EOF
+)
+CGO_ENABLED=0 go build -a -tags netgo -installsuffix . -ldflags "-X git.qur.me/qur/wharf_rat/lib/version.versionString=${ver}"

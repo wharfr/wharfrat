@@ -15,6 +15,7 @@ import (
 	"git.qur.me/qur/wharf_rat/lib/vc"
 
 	"github.com/docker/distribution/reference"
+	"github.com/docker/docker/api"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -31,8 +32,12 @@ type Connection struct {
 	ctx context.Context
 }
 
+func Version() string {
+	return api.DefaultVersion
+}
+
 func Connect() (*Connection, error) {
-	c, err := client.NewEnvClient()
+	c, err := client.NewClientWithOpts()
 	if err != nil {
 		return nil, err
 	}
