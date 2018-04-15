@@ -95,7 +95,17 @@ func (c *Connection) pullImage(name string) error {
 		return err
 	}
 
-	log.Printf("REF: %v REG: %v", ref, repoInfo)
+	authName := repoInfo.Index.Name
+	if repoInfo.Index.Official {
+		info, err := c.Info()
+		if err != nil {
+			return err
+		}
+		address := info.IndexServerAddress
+		authName = registry.ConvertToHostname(address)
+	}
+
+	log.Printf("REF: %v, REG: %v, Name: %s", ref, repoInfo, authName)
 
 	auth, err := config.LoadAuth()
 	if err != nil {
@@ -103,7 +113,7 @@ func (c *Connection) pullImage(name string) error {
 	}
 
 	options := types.ImageCreateOptions{
-		RegistryAuth: auth[repoInfo.Index.Name],
+		RegistryAuth: auth[authName],
 		Platform:     "linux",
 	}
 
