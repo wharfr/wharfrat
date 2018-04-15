@@ -383,6 +383,16 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		"WHARF_RAT_PROJECT=" + crate.ProjectPath(),
 	}
 
+	log.Printf("CRATE ENV: %v", crate.Env)
+	for name, value := range crate.Env {
+		switch name {
+		case "WHARF_RAT_CRATE", "WHARF_RAT_PROJECT":
+			log.Printf("Ignoring attempt to change %s", name)
+		default:
+			env = append(env, name+"="+value)
+		}
+	}
+
 	whitelist := map[string]bool{
 		"DISPLAY":    true,
 		"EDITOR":     true,

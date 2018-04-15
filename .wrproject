@@ -43,6 +43,8 @@ default = "main"
   [crates.ubuntu.tarballs]
       "test.tgz" = "/test"
       #"/tmp/test.tgz" = "/test/foo"
+  [crates.ubuntu.env]
+      "INSIDE_CRATE" = "true"
 
 [crates.ubuntu-lts]
   image = "ubuntu:16.04"

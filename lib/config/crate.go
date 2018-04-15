@@ -27,6 +27,7 @@ type Crate struct {
 	Tarballs     map[string]string
 	ProjectMount string `toml:"project-mount"`
 	WorkingDir   string `toml:"working-dir"`
+	Env          map[string]string
 	projectPath  string
 	name         string
 	branch       string
