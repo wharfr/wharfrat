@@ -14,6 +14,7 @@ type LocalConfig struct {
 	SetupPre  string `toml:"setup-pre"`
 	SetupPost string `toml:"setup-post"`
 	Tarballs  map[string]string
+	Env       map[string]string
 	path      string
 }
 

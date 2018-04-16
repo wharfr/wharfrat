@@ -393,6 +393,17 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		}
 	}
 
+	local := config.Local()
+	log.Printf("LOCAL ENV: %v", local.Env)
+	for name, value := range local.Env {
+		switch name {
+		case "WHARF_RAT_CRATE", "WHARF_RAT_PROJECT":
+			log.Printf("Ignoring attempt to change %s", name)
+		default:
+			env = append(env, name+"="+value)
+		}
+	}
+
 	whitelist := map[string]bool{
 		"DISPLAY":    true,
 		"EDITOR":     true,
