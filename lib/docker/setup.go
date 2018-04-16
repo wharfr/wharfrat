@@ -51,24 +51,33 @@ func (c *Connection) setupUser(id string, crate *config.Crate) error {
 	return nil
 }
 
-func (c *Connection) setupPrep(id string, crate *config.Crate) error {
-	cmd := exec.Command("/bin/bash")
-	cmd.Stdin = strings.NewReader(crate.SetupPrep)
+func (c *Connection) setupPrep(id, prep, path string, args ...string) error {
+	if prep == "" {
+		return nil
+	}
+
+	args = append([]string{"-s"}, args...)
+	log.Printf("PREP ARGS: %v", args)
+
+	cmd := exec.Command("/bin/bash", args...)
+	cmd.Stdin = strings.NewReader(prep)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Dir = filepath.Dir(crate.ProjectPath())
+	cmd.Dir = filepath.Dir(path)
+
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("Setup prep script failed: %s", err)
 	}
+
 	return nil
 }
 
-func (c *Connection) runScript(id, label, script string) error {
+func (c *Connection) runScript(id, label, script string, args ...string) error {
 	if script == "" {
 		return nil
 	}
 
-	cmd := []string{"/bin/bash"}
+	cmd := append([]string{"/bin/bash", "-s"}, args...)
 	stdin := strings.NewReader(script)
 
 	exitCode, err := c.run(id, cmd, stdin, os.Stdout, os.Stderr)
@@ -106,10 +115,8 @@ func (c *Connection) installTarball(id string, base, src, dst string) error {
 	return c.c.CopyToContainer(c.ctx, id, dst, f, options)
 }
 
-func (c *Connection) setupTarballs(id string, crate *config.Crate) error {
-	base := filepath.Dir(crate.ProjectPath())
-
-	for src, dst := range crate.Tarballs {
+func (c *Connection) setupTarballs(id, base string, tarballs map[string]string) error {
+	for src, dst := range tarballs {
 		if err := c.installTarball(id, base, src, dst); err != nil {
 			return err
 		}
@@ -118,24 +125,41 @@ func (c *Connection) setupTarballs(id string, crate *config.Crate) error {
 	return nil
 }
 
+func (c *Connection) doSteps(id, base, prep, pre, post string, tarballs map[string]string, args ...string) error {
+	if err := c.setupPrep(id, prep, base, args...); err != nil {
+		return err
+	}
+
+	if err := c.runScript(id, "pre", pre); err != nil {
+		return err
+	}
+
+	if err := c.setupTarballs(id, base, tarballs); err != nil {
+		return err
+	}
+
+	if err := c.runScript(id, "post", post); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *Connection) setup(id string, crate *config.Crate) error {
+	projectPath := filepath.Dir(crate.ProjectPath())
+
 	if err := c.setupUser(id, crate); err != nil {
 		return err
 	}
 
-	if err := c.setupPrep(id, crate); err != nil {
+	if err := c.doSteps(id, projectPath, crate.SetupPrep, crate.SetupPre, crate.SetupPost, crate.Tarballs, projectPath, crate.Name()); err != nil {
 		return err
 	}
 
-	if err := c.runScript(id, "pre", crate.SetupPre); err != nil {
-		return err
-	}
+	local := config.Local()
+	localPath := local.Path()
 
-	if err := c.setupTarballs(id, crate); err != nil {
-		return err
-	}
-
-	if err := c.runScript(id, "post", crate.SetupPost); err != nil {
+	if err := c.doSteps(id, localPath, local.SetupPrep, local.SetupPre, local.SetupPost, local.Tarballs, projectPath, crate.Name()); err != nil {
 		return err
 	}
 

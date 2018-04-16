@@ -10,6 +10,11 @@ import (
 
 type LocalConfig struct {
 	DockerURL string `toml:"docker-url"`
+	SetupPrep string `toml:"setup-prep"`
+	SetupPre  string `toml:"setup-pre"`
+	SetupPost string `toml:"setup-post"`
+	Tarballs  map[string]string
+	path      string
 }
 
 const localName = "config.toml"
@@ -33,10 +38,15 @@ func loadLocal() {
 		log.Printf("Failed to load local config: ", err)
 		return
 	}
+	localConfig.path = f.Name()
 	log.Printf("Unknown config keys: %s", md.Undecoded())
 }
 
 func Local() *LocalConfig {
 	localOnce.Do(loadLocal)
 	return &localConfig
+}
+
+func (l *LocalConfig) Path() string {
+	return l.path
 }
