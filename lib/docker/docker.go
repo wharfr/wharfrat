@@ -376,7 +376,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	log.Printf("CMD: %v", cmds)
 
 	inFd, inTerm := term.GetFdInfo(os.Stdin)
-	outFd, _ := term.GetFdInfo(os.Stdout)
+	outFd, outTerm := term.GetFdInfo(os.Stdout)
 
 	env := []string{
 		"WHARF_RAT_CRATE=" + crate.Name(),
@@ -444,7 +444,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
-		Tty:          inTerm,
+		Tty:          inTerm && outTerm,
 		Cmd:          cmds,
 		Env:          env,
 		User:         user,
@@ -464,7 +464,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	log.Printf("EXEC: ID=%s", execID)
 
 	startCheck := types.ExecStartCheck{
-		Tty: inTerm,
+		Tty: config.Tty,
 	}
 	attach, err := c.c.ContainerExecAttach(c.ctx, execID, startCheck)
 	if err != nil {
@@ -472,7 +472,9 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	}
 	defer attach.Close()
 
-	if inTerm {
+	outChan := make(chan error)
+
+	if config.Tty {
 		inState, err := term.SetRawTerminal(inFd)
 		if err != nil {
 			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
@@ -484,20 +486,6 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
 		}
 		defer term.RestoreTerminal(outFd, outState)
-	}
-
-	outChan := make(chan error)
-
-	go func() {
-		io.Copy(attach.Conn, os.Stdin)
-		attach.CloseWrite()
-	}()
-
-	if inTerm {
-		go func() {
-			_, err := io.Copy(os.Stdout, attach.Reader)
-			outChan <- err
-		}()
 
 		resizeTty := func() error {
 			size, err := term.GetWinsize(inFd)
@@ -526,6 +514,11 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 				resizeTty()
 			}
 		}()
+
+		go func() {
+			_, err := io.Copy(os.Stdout, attach.Reader)
+			outChan <- err
+		}()
 	} else {
 		go func() {
 			_, err := stdcopy.StdCopy(os.Stdout, os.Stderr, attach.Reader)
@@ -533,6 +526,11 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 			outChan <- err
 		}()
 	}
+
+	go func() {
+		io.Copy(attach.Conn, os.Stdin)
+		attach.CloseWrite()
+	}()
 
 	// Wait for copies to finish
 	if err = <-outChan; err != nil {
