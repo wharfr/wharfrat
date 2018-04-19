@@ -484,18 +484,6 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	outChan := make(chan error)
 
 	if config.Tty {
-		inState, err := term.SetRawTerminal(inFd)
-		if err != nil {
-			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
-		}
-		defer term.RestoreTerminal(inFd, inState)
-
-		outState, err := term.SetRawTerminal(outFd)
-		if err != nil {
-			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
-		}
-		defer term.RestoreTerminal(outFd, outState)
-
 		resizeTty := func() error {
 			size, err := term.GetWinsize(inFd)
 			log.Printf("Resize: size=%v err=%s id=%s", size, err, execID)
@@ -536,6 +524,18 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 				resizeTty()
 			}
 		}()
+
+		inState, err := term.SetRawTerminal(inFd)
+		if err != nil {
+			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
+		}
+		defer term.RestoreTerminal(inFd, inState)
+
+		outState, err := term.SetRawTerminal(outFd)
+		if err != nil {
+			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
+		}
+		defer term.RestoreTerminal(outFd, outState)
 
 		attach.Conn.Write([]byte("PROXY RUN\n"))
 
