@@ -16,7 +16,12 @@ import (
 	"github.com/docker/docker/registry"
 )
 
-func (c *Connection) run(id string, cmd []string, stdin io.Reader, stdout, stderr io.Writer) (int, error) {
+func (c *Connection) run(id string, cmd []string, env map[string]string, stdin io.Reader, stdout, stderr io.Writer) (int, error) {
+	environ := make([]string, 0, len(env))
+	for key, value := range env {
+		environ = append(environ, key+"="+value)
+	}
+
 	config := types.ExecConfig{
 		AttachStdin:  stdin != nil,
 		AttachStdout: true,
@@ -24,6 +29,7 @@ func (c *Connection) run(id string, cmd []string, stdin io.Reader, stdout, stder
 		Tty:          false,
 		User:         "root:root",
 		Cmd:          cmd,
+		Env:          environ,
 	}
 
 	resp, err := c.c.ContainerExecCreate(c.ctx, id, config)
