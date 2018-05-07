@@ -68,24 +68,12 @@ func (c *Connection) List() ([]types.Container, error) {
 	})
 }
 
-func (c *Connection) GetContainer(name string) (*types.Container, error) {
-	containers, err := c.c.ContainerList(c.ctx, types.ContainerListOptions{
-		All:     true,
-		Filters: filters.NewArgs(filters.Arg("name", name)),
-	})
-	if err != nil {
-		return nil, err
-	}
-	for _, container := range containers {
-		log.Printf("CONTAINER %s %v %s %v", container.ID, container.Names, container.Status, container.Labels)
-	}
-	if len(containers) == 0 {
+func (c *Connection) GetContainer(name string) (*types.ContainerJSON, error) {
+	container, err := c.c.ContainerInspect(c.ctx, name)
+	if client.IsErrNotFound(err) {
 		return nil, nil
 	}
-	if len(containers) > 1 {
-		return nil, fmt.Errorf("Multiple containers with name %s", name)
-	}
-	return &containers[0], nil
+	return &container, err
 }
 
 func (c *Connection) Start(id string) error {
@@ -210,12 +198,12 @@ func (c *Connection) EnsureRunning(crate *config.Crate, force bool) (string, err
 
 	log.Printf("FOUND %s %s", container.ID, container.State)
 
-	oldJson := container.Labels["me.qur.wharf-rat.config"]
+	oldJson := container.Config.Labels["me.qur.wharf-rat.config"]
 	if oldJson != crate.Json() && !force {
 		return "", fmt.Errorf("Container built from old config")
 	}
 
-	switch container.State {
+	switch container.State.Status {
 	case "created":
 		return "", fmt.Errorf("State %s NOT IMPLEMENTED", container.State)
 	case "running":
@@ -257,7 +245,7 @@ func (c *Connection) EnsureStopped(name string) error {
 
 	// TODO(jp3): implement stopping the container
 
-	switch container.State {
+	switch container.State.Status {
 	case "created":
 		log.Printf("CREATED")
 	case "running":

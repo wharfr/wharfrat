@@ -8,17 +8,18 @@ import (
 )
 
 type options struct {
+	Debug   bool `short:"d" long:"debug" description:"Show debug output"`
+	Info    `command:"info" description:"Show information about current crate"`
 	List    `command:"list" description:"List existing containers"`
+	Login   `command:"login" description:"Cache credentials for a registry"`
+	Logout  `command:"logout" description:"Drop credentials for a registry"`
+	Prune   `command:"prune" description:"Remove containers for non-existent crates"`
+	Remove  `command:"remove" description:"Remove an existing container"`
+	Rm      Remove `command:"rm" description:"Remove an existing container"`
 	Run     `command:"run" description:"Run a command in a container"`
 	Start   `command:"start" description:"Start an existing container"`
 	Stop    `command:"stop" description:"Stop an existing container"`
-	Remove  `command:"remove" description:"Remove an existing container"`
-	Rm      Remove `command:"rm" description:"Remove an existing container"`
-	Prune   `command:"prune" description:"Remove containers for non-existent crates"`
-	Login   `command:"login" description:"Cache credentials for a registry"`
-	Logout  `command:"logout" description:"Drop credentials for a registry"`
 	Version `command:"version" description:"Show version of tool"`
-	Debug   bool `short:"d" long:"debug" description:"Show debug output"`
 }
 
 func Main() int {
