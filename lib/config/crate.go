@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.qur.me/qur/wharf_rat/lib/vc"
+	"wharfr.at/wharfrat/lib/vc"
 )
 
 type Crate struct {

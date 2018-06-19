@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"git.qur.me/qur/wharf_rat/lib/docker"
+	"wharfr.at/wharfrat/lib/docker"
 )
 
 var versionString = "eyJ2ZXJzaW9uIjoidW5rbm93biIsImNvbW1pdCI6InVua25vd24ifQo="

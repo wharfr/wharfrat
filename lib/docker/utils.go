@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
+	"wharfr.at/wharfrat/lib/config"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/jsonmessage"

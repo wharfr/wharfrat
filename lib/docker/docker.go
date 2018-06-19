@@ -11,8 +11,8 @@ import (
 	"strings"
 	"syscall"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
-	"git.qur.me/qur/wharf_rat/lib/vc"
+	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/vc"
 
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api"
@@ -64,7 +64,7 @@ func (c *Connection) Close() error {
 func (c *Connection) List() ([]types.Container, error) {
 	return c.c.ContainerList(c.ctx, types.ContainerListOptions{
 		All:     true,
-		Filters: filters.NewArgs(filters.Arg("label", "me.qur.wharf-rat.project")),
+		Filters: filters.NewArgs(filters.Arg("label", "at.wharfr.wharfrat.project")),
 	})
 }
 
@@ -95,16 +95,16 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	labels := map[string]string{
-		"me.qur.wharf-rat.project": crate.ProjectPath(),
-		"me.qur.wharf-rat.crate":   crate.Name(),
-		"me.qur.wharf-rat.config":  crate.Json(),
+		"at.wharfr.wharfrat.project": crate.ProjectPath(),
+		"at.wharfr.wharfrat.crate":   crate.Name(),
+		"at.wharfr.wharfrat.config":  crate.Json(),
 	}
 
 	projectDir := filepath.Dir(crate.ProjectPath())
 	if branch, err := vc.Branch(projectDir); err != nil {
 		log.Printf("Failed to get vc branch: %s", err)
 	} else {
-		labels["me.qur.wharf-rat.branch"] = branch
+		labels["at.wharfr.wharfrat.branch"] = branch
 	}
 
 	config := &container.Config{
@@ -200,7 +200,7 @@ func (c *Connection) EnsureRunning(crate *config.Crate, force bool) (string, err
 
 	log.Printf("FOUND %s %s", container.ID, container.State)
 
-	oldJson := container.Config.Labels["me.qur.wharf-rat.config"]
+	oldJson := container.Config.Labels["at.wharfr.wharfrat.config"]
 	if oldJson != crate.Json() && !force {
 		return "", fmt.Errorf("Container built from old config")
 	}

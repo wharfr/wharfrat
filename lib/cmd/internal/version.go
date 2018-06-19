@@ -1,6 +1,6 @@
 package internal
 
-import "git.qur.me/qur/wharf_rat/lib/version"
+import "wharfr.at/wharfrat/lib/version"
 
 type Version struct{}
 

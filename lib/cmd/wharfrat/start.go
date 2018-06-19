@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
-	"git.qur.me/qur/wharf_rat/lib/docker"
+	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker"
 )
 
 type Start struct {
@@ -47,8 +47,8 @@ func (s *Start) Execute(args []string) error {
 	log.Printf("FOUND: %d", len(containers))
 
 	for _, container := range containers {
-		projectFile := container.Labels["me.qur.wharf-rat.project"]
-		crateName := container.Labels["me.qur.wharf-rat.crate"]
+		projectFile := container.Labels["at.wharfr.wharfrat.project"]
+		crateName := container.Labels["at.wharfr.wharfrat.crate"]
 
 		name := container.Names[0]
 		if strings.HasPrefix(name, "/") {

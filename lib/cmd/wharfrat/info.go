@@ -5,8 +5,8 @@ import (
 	"log"
 	"path/filepath"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
-	"git.qur.me/qur/wharf_rat/lib/docker"
+	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker"
 )
 
 type Info struct {
@@ -45,8 +45,8 @@ func (i *Info) Execute(args []string) error {
 	log.Printf("CONTAINER: %#v", container)
 
 	if container != nil {
-		cfg = container.Config.Labels["me.qur.wharf-rat.config"]
-		branch = container.Config.Labels["me.qur.wharf-rat.branch"]
+		cfg = container.Config.Labels["at.wharfr.wharfrat.config"]
+		branch = container.Config.Labels["at.wharfr.wharfrat.branch"]
 
 		v4 := container.NetworkSettings.IPAddress
 		v6 := container.NetworkSettings.GlobalIPv6Address

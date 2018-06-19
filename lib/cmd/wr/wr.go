@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"git.qur.me/qur/wharf_rat/lib/cmd/wharfrat"
-	"git.qur.me/qur/wharf_rat/lib/version"
+	"wharfr.at/wharfrat/lib/cmd/wharfrat"
+	"wharfr.at/wharfrat/lib/version"
 
 	flags "github.com/jessevdk/go-flags"
 )

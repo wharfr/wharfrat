@@ -4,9 +4,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"git.qur.me/qur/wharf_rat/lib/cmd/internal"
-	"git.qur.me/qur/wharf_rat/lib/cmd/wharfrat"
-	"git.qur.me/qur/wharf_rat/lib/cmd/wr"
+	"wharfr.at/wharfrat/lib/cmd/internal"
+	"wharfr.at/wharfrat/lib/cmd/wharfrat"
+	"wharfr.at/wharfrat/lib/cmd/wr"
 )
 
 func Main() int {

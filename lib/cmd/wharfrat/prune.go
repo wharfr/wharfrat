@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
-	"git.qur.me/qur/wharf_rat/lib/docker"
-	"git.qur.me/qur/wharf_rat/lib/vc"
+	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/vc"
 )
 
 type Prune struct {
@@ -33,9 +33,9 @@ func (p *Prune) Execute(args []string) error {
 	missing := []string{}
 
 	for _, container := range containers {
-		projectFile := container.Labels["me.qur.wharf-rat.project"]
-		crateName := container.Labels["me.qur.wharf-rat.crate"]
-		branch := container.Labels["me.qur.wharf-rat.branch"]
+		projectFile := container.Labels["at.wharfr.wharfrat.project"]
+		crateName := container.Labels["at.wharfr.wharfrat.crate"]
+		branch := container.Labels["at.wharfr.wharfrat.branch"]
 
 		name := container.Names[0]
 		if strings.HasPrefix(name, "/") {

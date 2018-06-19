@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"git.qur.me/qur/wharf_rat/lib/docker"
+	"wharfr.at/wharfrat/lib/docker"
 )
 
 type Stop struct {

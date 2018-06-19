@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
+	"wharfr.at/wharfrat/lib/config"
 	"github.com/docker/docker/api/types"
 )
 
