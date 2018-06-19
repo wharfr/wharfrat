@@ -395,20 +395,17 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		}
 	}
 
-	whitelist := map[string]bool{
-		"DISPLAY":    true,
-		"EDITOR":     true,
-		"LESS":       true,
-		"LS_COLORS":  true,
-		"LS_OPTIONS": true,
-		"MORE":       true,
-		"PAGER":      true,
-		"TERM":       true,
-		"XAUTHORITY": true,
+	blacklist := map[string]bool{
+		"HOSTNAME": true,
+		"PATH":     true,
+		"SHELL":    true,
+		"HOST":     true,
+		"USER":     true,
+		"HOME":     true,
 	}
 
 	for _, entry := range os.Environ() {
-		if parts := strings.SplitN(entry, "=", 2); whitelist[parts[0]] {
+		if parts := strings.SplitN(entry, "=", 2); !blacklist[parts[0]] {
 			env = append(env, entry)
 		}
 	}
