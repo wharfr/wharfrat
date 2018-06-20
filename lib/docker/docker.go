@@ -28,10 +28,17 @@ import (
 )
 
 const (
-	LabelProject = "at.wharfr.wharfrat.project"
-	LabelCrate   = "at.wharfr.wharfrat.crate"
-	LabelConfig  = "at.wharfr.wharfrat.config"
-	LabelBranch  = "at.wharfr.wharfrat.branch"
+	domain       = "at.wharfr.wharfrat"
+	LabelProject = domain + ".project"
+	LabelCrate   = domain + ".crate"
+	LabelConfig  = domain + ".config"
+	LabelBranch  = domain + ".branch"
+
+	oldDomain       = "me.qur.wharf-rat"
+	oldLabelProject = oldDomain + ".project"
+	oldLabelCrate   = oldDomain + ".crate"
+	oldLabelConfig  = oldDomain + ".config"
+	oldLabelBranch  = oldDomain + ".branch"
 )
 
 type Connection struct {
@@ -41,6 +48,21 @@ type Connection struct {
 
 func Version() string {
 	return api.DefaultVersion
+}
+
+func fixOldLabels(labels map[string]string) {
+	project, found := labels[oldLabelProject]
+	if !found {
+		return
+	}
+	labels[LabelProject] = project
+	labels[LabelCrate] = labels[oldLabelCrate]
+	labels[LabelConfig] = labels[oldLabelConfig]
+	labels[LabelBranch] = labels[oldLabelBranch]
+	delete(labels, oldLabelProject)
+	delete(labels, oldLabelCrate)
+	delete(labels, oldLabelConfig)
+	delete(labels, oldLabelBranch)
 }
 
 func Connect() (*Connection, error) {
@@ -69,10 +91,25 @@ func (c *Connection) Close() error {
 }
 
 func (c *Connection) List() ([]types.Container, error) {
-	return c.c.ContainerList(c.ctx, types.ContainerListOptions{
+	old, err := c.c.ContainerList(c.ctx, types.ContainerListOptions{
+		All:     true,
+		Filters: filters.NewArgs(filters.Arg("label", oldLabelProject)),
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range old {
+		log.Printf("OLD: %s", c.ID)
+		fixOldLabels(c.Labels)
+	}
+	new, err := c.c.ContainerList(c.ctx, types.ContainerListOptions{
 		All:     true,
 		Filters: filters.NewArgs(filters.Arg("label", LabelProject)),
 	})
+	if err != nil {
+		return nil, err
+	}
+	return append(old, new...), nil
 }
 
 func (c *Connection) GetContainer(name string) (*types.ContainerJSON, error) {
@@ -80,6 +117,7 @@ func (c *Connection) GetContainer(name string) (*types.ContainerJSON, error) {
 	if client.IsErrNotFound(err) {
 		return nil, nil
 	}
+	fixOldLabels(container.Config.Labels)
 	return &container, err
 }
 
