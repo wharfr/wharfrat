@@ -47,8 +47,8 @@ func (s *Start) Execute(args []string) error {
 	log.Printf("FOUND: %d", len(containers))
 
 	for _, container := range containers {
-		projectFile := container.Labels["at.wharfr.wharfrat.project"]
-		crateName := container.Labels["at.wharfr.wharfrat.crate"]
+		projectFile := container.Labels[docker.LabelProject]
+		crateName := container.Labels[docker.LabelCrate]
 
 		name := container.Names[0]
 		if strings.HasPrefix(name, "/") {

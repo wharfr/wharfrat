@@ -27,6 +27,13 @@ import (
 	"golang.org/x/net/context"
 )
 
+const (
+	LabelProject = "at.wharfr.wharfrat.project"
+	LabelCrate   = "at.wharfr.wharfrat.crate"
+	LabelConfig  = "at.wharfr.wharfrat.config"
+	LabelBranch  = "at.wharfr.wharfrat.branch"
+)
+
 type Connection struct {
 	c   *client.Client
 	ctx context.Context
@@ -64,7 +71,7 @@ func (c *Connection) Close() error {
 func (c *Connection) List() ([]types.Container, error) {
 	return c.c.ContainerList(c.ctx, types.ContainerListOptions{
 		All:     true,
-		Filters: filters.NewArgs(filters.Arg("label", "at.wharfr.wharfrat.project")),
+		Filters: filters.NewArgs(filters.Arg("label", LabelProject)),
 	})
 }
 
@@ -95,16 +102,16 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	labels := map[string]string{
-		"at.wharfr.wharfrat.project": crate.ProjectPath(),
-		"at.wharfr.wharfrat.crate":   crate.Name(),
-		"at.wharfr.wharfrat.config":  crate.Json(),
+		LabelProject: crate.ProjectPath(),
+		LabelCrate:   crate.Name(),
+		LabelConfig:  crate.Json(),
 	}
 
 	projectDir := filepath.Dir(crate.ProjectPath())
 	if branch, err := vc.Branch(projectDir); err != nil {
 		log.Printf("Failed to get vc branch: %s", err)
 	} else {
-		labels["at.wharfr.wharfrat.branch"] = branch
+		labels[LabelBranch] = branch
 	}
 
 	config := &container.Config{
@@ -200,7 +207,7 @@ func (c *Connection) EnsureRunning(crate *config.Crate, force bool) (string, err
 
 	log.Printf("FOUND %s %s", container.ID, container.State)
 
-	oldJson := container.Config.Labels["at.wharfr.wharfrat.config"]
+	oldJson := container.Config.Labels[LabelConfig]
 	if oldJson != crate.Json() && !force {
 		return "", fmt.Errorf("Container built from old config")
 	}

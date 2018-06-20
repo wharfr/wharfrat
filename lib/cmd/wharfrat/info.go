@@ -45,8 +45,8 @@ func (i *Info) Execute(args []string) error {
 	log.Printf("CONTAINER: %#v", container)
 
 	if container != nil {
-		cfg = container.Config.Labels["at.wharfr.wharfrat.config"]
-		branch = container.Config.Labels["at.wharfr.wharfrat.branch"]
+		cfg = container.Config.Labels[docker.LabelConfig]
+		branch = container.Config.Labels[docker.LabelBranch]
 
 		v4 := container.NetworkSettings.IPAddress
 		v6 := container.NetworkSettings.GlobalIPv6Address

@@ -33,9 +33,9 @@ func (p *Prune) Execute(args []string) error {
 	missing := []string{}
 
 	for _, container := range containers {
-		projectFile := container.Labels["at.wharfr.wharfrat.project"]
-		crateName := container.Labels["at.wharfr.wharfrat.crate"]
-		branch := container.Labels["at.wharfr.wharfrat.branch"]
+		projectFile := container.Labels[docker.LabelProject]
+		crateName := container.Labels[docker.LabelCrate]
+		branch := container.Labels[docker.LabelBranch]
 
 		name := container.Names[0]
 		if strings.HasPrefix(name, "/") {
