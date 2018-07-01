@@ -117,7 +117,9 @@ func (c *Connection) GetContainer(name string) (*types.ContainerJSON, error) {
 	if client.IsErrNotFound(err) {
 		return nil, nil
 	}
-	fixOldLabels(container.Config.Labels)
+	if container.Config != nil {
+		fixOldLabels(container.Config.Labels)
+	}
 	return &container, err
 }
 
