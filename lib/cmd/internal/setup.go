@@ -15,6 +15,7 @@ type Setup struct {
 	Gid    string   `short:"G" long:"gid" value-name:"GID" default:"1000"`
 	Groups []string `short:"e" long:"extra-group" value-name:"GROUP"`
 	Name   string   `short:"n" long:"name" value-name:"NAME"`
+	MkHome bool     `short:"h" long:"mkhome"`
 }
 
 func (opts *Setup) setup_group() error {
@@ -38,8 +39,12 @@ func (opts *Setup) setup_group() error {
 }
 
 func (opts *Setup) setup_user() error {
-	args := []string{
-		"--no-create-home",
+	args := []string{}
+
+	if opts.MkHome {
+		args = append(args, "--create-home")
+	} else {
+		args = append(args, "--no-create-home")
 	}
 
 	if opts.Uid != "0" {

@@ -172,9 +172,12 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	binds := []string{
-		"/home:/home",
 		"/tmp/.X11-unix:/tmp/.X11-unix",
 		self + ":/sbin/wr-init:ro",
+	}
+
+	if crate.MountHome {
+		binds = append(binds, "/home:/home")
 	}
 
 	if crate.ProjectMount != "" {

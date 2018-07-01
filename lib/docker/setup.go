@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"wharfr.at/wharfrat/lib/config"
 	"github.com/docker/docker/api/types"
+	"wharfr.at/wharfrat/lib/config"
 )
 
 func (c *Connection) setupUser(id string, crate *config.Crate, usr *user.User, group *user.Group) error {
@@ -23,6 +23,10 @@ func (c *Connection) setupUser(id string, crate *config.Crate, usr *user.User, g
 
 	for _, group := range crate.Groups {
 		cmd = append(cmd, "--extra-group", group)
+	}
+
+	if !crate.MountHome {
+		cmd = append(cmd, "--mkhome")
 	}
 
 	buf := &bytes.Buffer{}

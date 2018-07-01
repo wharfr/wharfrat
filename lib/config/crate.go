@@ -29,6 +29,7 @@ type Crate struct {
 	Tarballs     map[string]string
 	ProjectMount string `toml:"project-mount"`
 	WorkingDir   string `toml:"working-dir"`
+	MountHome    bool   `toml:"mount-home"`
 	Env          map[string]string
 	projectPath  string
 	name         string
@@ -90,6 +91,10 @@ func openCrate(project *Project, crateName, branch string) (*Crate, error) {
 	crate, ok := project.Crates[crateName]
 	if !ok {
 		return nil, CrateNotFound
+	}
+
+	if !project.meta.IsDefined("crates", crateName, "mount-home") {
+		crate.MountHome = true
 	}
 
 	if crate.Hostname == "" {
