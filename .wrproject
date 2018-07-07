@@ -55,3 +55,9 @@ default = "main"
 
 [crates.local]
   image = "localhost:5000/some/image"
+
+[crates.docs]
+  image = "wharfr/docs"
+  mount-home = false
+  project-mount = "/wharfrat"
+  working-dir = "project, match"
