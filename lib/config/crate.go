@@ -31,6 +31,7 @@ type Crate struct {
 	WorkingDir   string `toml:"working-dir"`
 	MountHome    bool   `toml:"mount-home"`
 	Env          map[string]string
+	Shell        string
 	projectPath  string
 	name         string
 	branch       string
@@ -99,6 +100,10 @@ func openCrate(project *Project, crateName, branch string) (*Crate, error) {
 
 	if crate.Hostname == "" {
 		crate.Hostname = "dev"
+	}
+
+	if crate.Shell == "" {
+		crate.Shell = "/bin/sh"
 	}
 
 	crate.projectPath = project.path

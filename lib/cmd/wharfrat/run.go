@@ -67,7 +67,7 @@ func (opts *Run) client(args []string) (int, error) {
 	}
 
 	if len(args) == 0 {
-		args = append(args, "/bin/bash")
+		args = append(args, crate.Shell)
 	}
 
 	ret, err := c.ExecCmd(container, args, crate, opts.User, opts.Workdir)
