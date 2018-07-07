@@ -452,6 +452,11 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		"HOST":     true,
 		"USER":     true,
 		"HOME":     true,
+		"PS0":      true,
+		"PS1":      true,
+		"PS2":      true,
+		"PS3":      true,
+		"PS4":      true,
 	}
 
 	for _, entry := range os.Environ() {
