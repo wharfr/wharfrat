@@ -24,6 +24,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/docker/pkg/term"
+	"github.com/docker/go-connections/nat"
 	"golang.org/x/net/context"
 )
 
@@ -154,12 +155,20 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		labels[LabelBranch] = branch
 	}
 
+	exposed, ports, err := nat.ParsePortSpecs(crate.Ports)
+	if err != nil {
+		return "", err
+	}
+
+	log.Printf("PORTS: %v %v", exposed, ports)
+
 	config := &container.Config{
-		User:     "root:root",
-		Cmd:      []string{"/sbin/wr-init", "server", "--debug"},
-		Image:    crate.Image,
-		Hostname: crate.Hostname,
-		Labels:   labels,
+		ExposedPorts: exposed,
+		User:         "root:root",
+		Cmd:          []string{"/sbin/wr-init", "server", "--debug"},
+		Image:        crate.Image,
+		Hostname:     crate.Hostname,
+		Labels:       labels,
 	}
 
 	tmpfs := make(map[string]string)
@@ -187,11 +196,17 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	log.Printf("BINDS: %v", binds)
 
+	// apparently we shouldn't let the DNS... fields be nil?
+	// See https://github.com/docker/docker/pull/17779
 	hostConfig := &container.HostConfig{
-		Binds:   binds,
-		Tmpfs:   tmpfs,
-		CapAdd:  crate.CapAdd,
-		CapDrop: crate.CapDrop,
+		Binds:        binds,
+		PortBindings: ports,
+		Tmpfs:        tmpfs,
+		CapAdd:       crate.CapAdd,
+		CapDrop:      crate.CapDrop,
+		DNS:          []string{},
+		DNSSearch:    []string{},
+		DNSOptions:   []string{},
 	}
 
 	networkingConfig := &network.NetworkingConfig{}

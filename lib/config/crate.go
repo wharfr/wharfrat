@@ -16,22 +16,23 @@ import (
 )
 
 type Crate struct {
-	Image        string
-	Volumes      []string
-	Hostname     string
-	Tmpfs        []string
-	Groups       []string
-	CapAdd       []string `toml:"cap-add"`
-	CapDrop      []string `toml:"cap-drop"`
-	SetupPrep    string   `toml:"setup-prep"`
-	SetupPre     string   `toml:"setup-pre"`
-	SetupPost    string   `toml:"setup-post"`
-	Tarballs     map[string]string
-	ProjectMount string `toml:"project-mount"`
-	WorkingDir   string `toml:"working-dir"`
-	MountHome    bool   `toml:"mount-home"`
-	Env          map[string]string
-	Shell        string
+	CapAdd       []string          `toml:"cap-add"`
+	CapDrop      []string          `toml:"cap-drop"`
+	Env          map[string]string `toml:"env"`
+	Groups       []string          `toml:"groups"`
+	Hostname     string            `toml:"hostname"`
+	Image        string            `toml:"image"`
+	MountHome    bool              `toml:"mount-home"`
+	Ports        []string          `toml:"ports"`
+	ProjectMount string            `toml:"project-mount"`
+	SetupPost    string            `toml:"setup-post"`
+	SetupPre     string            `toml:"setup-pre"`
+	SetupPrep    string            `toml:"setup-prep"`
+	Shell        string            `toml:"shell"`
+	Tarballs     map[string]string `toml:"tarballs"`
+	Tmpfs        []string          `toml:"tmpfs"`
+	Volumes      []string          `toml:"volumes"`
+	WorkingDir   string            `toml:"working-dir"`
 	projectPath  string
 	name         string
 	branch       string
