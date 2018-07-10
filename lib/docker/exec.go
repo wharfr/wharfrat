@@ -64,6 +64,14 @@ func buildEnv(crate *config.Crate) []string {
 		"PS4":      true,
 	}
 
+	for _, name := range crate.EnvWhitelist {
+		blacklist[name] = false
+	}
+
+	for _, name := range crate.EnvBlacklist {
+		blacklist[name] = true
+	}
+
 	for _, entry := range os.Environ() {
 		if parts := strings.SplitN(entry, "=", 2); !blacklist[parts[0]] {
 			env = append(env, entry)

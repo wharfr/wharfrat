@@ -20,6 +20,8 @@ type Crate struct {
 	CapDrop      []string          `toml:"cap-drop"`
 	CopyGroups   []string          `toml:"copy-groups"`
 	Env          map[string]string `toml:"env"`
+	EnvBlacklist []string          `toml:"env-blacklist"`
+	EnvWhitelist []string          `toml:"env-whitelist"`
 	Groups       []string          `toml:"groups"`
 	Hostname     string            `toml:"hostname"`
 	Image        string            `toml:"image"`
