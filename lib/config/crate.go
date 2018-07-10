@@ -18,6 +18,7 @@ import (
 type Crate struct {
 	CapAdd       []string          `toml:"cap-add"`
 	CapDrop      []string          `toml:"cap-drop"`
+	CopyGroups   []string          `toml:"copy-groups"`
 	Env          map[string]string `toml:"env"`
 	Groups       []string          `toml:"groups"`
 	Hostname     string            `toml:"hostname"`

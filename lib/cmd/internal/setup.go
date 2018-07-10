@@ -25,8 +25,28 @@ type Setup struct {
 	Group  string   `short:"g" long:"group" value-name:"GROUP"`
 	Gid    string   `short:"G" long:"gid" value-name:"GID" default:"1000"`
 	Groups []string `short:"e" long:"extra-group" value-name:"GROUP"`
+	Create []string `long:"create-group" value-name:"NAME=ID"`
 	Name   string   `short:"n" long:"name" value-name:"NAME"`
 	MkHome bool     `short:"h" long:"mkhome"`
+}
+
+func (s *Setup) create_group(entry string) error {
+	parts := strings.SplitN(entry, "=", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("'%s' did not match NAME=ID", entry)
+	}
+
+	args := []string{
+		"--force", "--gid", parts[1], parts[0],
+	}
+
+	log.Printf("groupadd args: %#v", args)
+
+	cmd := exec.Command("/usr/sbin/groupadd", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
 }
 
 func (opts *Setup) setup_group_busybox() error {
@@ -166,6 +186,12 @@ func (opts *Setup) setup_user() error {
 
 func (s *Setup) Execute(args []string) error {
 	log.Printf("Setup Args: %#v, Opts: %#v", args, s)
+
+	for _, entry := range s.Create {
+		if err := s.create_group(entry); err != nil {
+			return fmt.Errorf("Failed to create group: %s", err)
+		}
+	}
 
 	if s.Group != "" {
 		if err := s.setup_group(); err != nil {

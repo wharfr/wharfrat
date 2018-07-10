@@ -21,6 +21,14 @@ func (c *Connection) setupUser(id string, crate *config.Crate, usr *user.User, g
 		"--group", group.Name, "--gid", group.Gid,
 	}
 
+	for _, name := range crate.CopyGroups {
+		group, err := user.LookupGroup(name)
+		if err != nil {
+			return fmt.Errorf("Failed to get group information for '%s': %s", name, err)
+		}
+		cmd = append(cmd, "--create-group", fmt.Sprintf("%s=%s", name, group.Gid))
+	}
+
 	for _, group := range crate.Groups {
 		cmd = append(cmd, "--extra-group", group)
 	}

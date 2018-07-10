@@ -5,9 +5,12 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
+	"strconv"
 	"syscall"
 
 	"github.com/docker/docker/pkg/term"
+	"golang.org/x/sys/unix"
 )
 
 type args struct {
@@ -17,8 +20,9 @@ type args struct {
 }
 
 type Proxy struct {
-	Sync    bool   `long:"sync"`
-	Workdir string `long:"workdir"`
+	Sync    bool     `long:"sync"`
+	Workdir string   `long:"workdir"`
+	Groups  []string `long:"group"`
 	//	Args    args `positional-args:"true" required:"true"`
 }
 
@@ -77,6 +81,37 @@ func (p *Proxy) Execute(args []string) error {
 		if err := os.Chdir(p.Workdir); err != nil {
 			return fmt.Errorf("Failed to change directory to %s: %s", p.Workdir, err)
 		}
+	}
+
+	u, err := user.LookupId(strconv.Itoa(os.Getuid()))
+	if err != nil {
+		return fmt.Errorf("Failed to lookup current user: %s", err)
+	}
+	gid, err := strconv.Atoi(u.Gid)
+	if err != nil {
+		return fmt.Errorf("Invalid GID '%s': %s", u.Gid, err)
+	}
+	groups := []int{gid}
+	for _, name := range p.Groups {
+		group, err := user.LookupGroup(name)
+		if err != nil {
+			log.Printf("Failed to lookup group '%s': %s", name, err)
+			continue
+		}
+		gid, err := strconv.Atoi(group.Gid)
+		if err != nil {
+			log.Printf("Invalid GID '%s' for group '%s': %s", u.Gid, name, err)
+			continue
+		}
+		groups = append(groups, gid)
+	}
+	if err := unix.Setgroups(groups); err != nil {
+		fmt.Printf("Failed to set groups: %s\n", err)
+	}
+	gids, err := unix.Getgroups()
+
+	if err := unix.Setreuid(os.Getuid(), os.Getuid()); err != nil {
+		return fmt.Errorf("Failed to set UID: %s")
 	}
 
 	cmd, err := exec.LookPath(args[0])

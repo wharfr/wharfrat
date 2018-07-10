@@ -1,11 +1,15 @@
 package docker
 
 import (
+	"archive/tar"
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/vc"
@@ -18,8 +22,50 @@ import (
 	"github.com/docker/go-connections/nat"
 )
 
+func getSelf() (*bytes.Buffer, error) {
+	self, err := os.Open("/proc/self/exe")
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get self: %s", err)
+	}
+	defer self.Close()
+	selfData, err := ioutil.ReadAll(self)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to read self: %s", err)
+	}
+
+	selfHdr := &tar.Header{
+		Typeflag: tar.TypeReg,
+		Name:     "wr-init",
+		Size:     int64(len(selfData)),
+		Mode:     int64(os.ModeSetuid | os.ModeSetgid | 0755),
+		Uid:      0,
+		Gid:      0,
+		Uname:    "root",
+		Gname:    "root",
+		ModTime:  time.Now(),
+	}
+
+	buf := &bytes.Buffer{}
+
+	w := tar.NewWriter(buf)
+	defer w.Close()
+
+	if err := w.WriteHeader(selfHdr); err != nil {
+		return nil, fmt.Errorf("Failed to build self archive (header): %s", err)
+	}
+	if _, err := w.Write(selfData); err != nil {
+		return nil, fmt.Errorf("Failed to build self archive (data): %s", err)
+	}
+
+	return buf, nil
+}
+
 func (c *Connection) Create(crate *config.Crate) (string, error) {
-	self, err := os.Readlink("/proc/self/exe")
+	// self, err := os.Readlink("/proc/self/exe")
+	// if err != nil {
+	// 	return "", fmt.Errorf("Failed to get self: %s", err)
+	// }
+	self, err := getSelf()
 	if err != nil {
 		return "", fmt.Errorf("Failed to get self: %s", err)
 	}
@@ -64,7 +110,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	binds := []string{
 		"/tmp/.X11-unix:/tmp/.X11-unix",
-		self + ":/sbin/wr-init:ro",
+		//self + ":/sbin/wr-init:ro",
 	}
 
 	if crate.MountHome {
@@ -122,6 +168,10 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		return "", err
 	}
 	cid := create.ID
+
+	if err := c.c.CopyToContainer(c.ctx, cid, "/sbin", self, types.CopyToContainerOptions{CopyUIDGID: false}); err != nil {
+		return "", err
+	}
 
 	if err := c.c.ContainerStart(c.ctx, cid, types.ContainerStartOptions{}); err != nil {
 		return "", err
