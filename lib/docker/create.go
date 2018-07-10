@@ -122,6 +122,10 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		binds = append(binds, pdir+":"+crate.ProjectMount)
 	}
 
+	if crate.Volumes != nil {
+		binds = append(binds, crate.Volumes...)
+	}
+
 	log.Printf("BINDS: %v", binds)
 
 	// apparently we shouldn't let the DNS... fields be nil?
