@@ -114,12 +114,15 @@ func (p *Proxy) Execute(args []string) error {
 		return fmt.Errorf("Failed to set UID: %s")
 	}
 
+	env := []string{"USER=" + u.Username}
+	env = append(env, os.Environ()...)
+
 	cmd, err := exec.LookPath(args[0])
 	if err != nil {
 		return fmt.Errorf("Failed to find %s: %s", args[0], err)
 	}
 
-	if err := syscall.Exec(cmd, args, os.Environ()); err != nil {
+	if err := syscall.Exec(cmd, args, env); err != nil {
 		return fmt.Errorf("Failed to exec %s: %s", err)
 	}
 	return nil
