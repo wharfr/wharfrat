@@ -33,11 +33,35 @@ func getSelf() (*bytes.Buffer, error) {
 		return nil, fmt.Errorf("Failed to read self: %s", err)
 	}
 
-	selfHdr := &tar.Header{
+	initHdr := &tar.Header{
 		Typeflag: tar.TypeReg,
-		Name:     "wr-init",
+		Name:     "/sbin/wr-init",
 		Size:     int64(len(selfData)),
 		Mode:     int64(os.ModeSetuid | os.ModeSetgid | 0755),
+		Uid:      0,
+		Gid:      0,
+		Uname:    "root",
+		Gname:    "root",
+		ModTime:  time.Now(),
+	}
+
+	wharfratHdr := &tar.Header{
+		Typeflag: tar.TypeReg,
+		Name:     "/usr/bin/wharfrat",
+		Size:     int64(len(selfData)),
+		Mode:     int64(0755),
+		Uid:      0,
+		Gid:      0,
+		Uname:    "root",
+		Gname:    "root",
+		ModTime:  time.Now(),
+	}
+
+	wrHdr := &tar.Header{
+		Typeflag: tar.TypeSymlink,
+		Name:     "/usr/bin/wr",
+		Linkname: "wharfrat",
+		Mode:     int64(0755),
 		Uid:      0,
 		Gid:      0,
 		Uname:    "root",
@@ -50,11 +74,22 @@ func getSelf() (*bytes.Buffer, error) {
 	w := tar.NewWriter(buf)
 	defer w.Close()
 
-	if err := w.WriteHeader(selfHdr); err != nil {
-		return nil, fmt.Errorf("Failed to build self archive (header): %s", err)
+	if err := w.WriteHeader(initHdr); err != nil {
+		return nil, fmt.Errorf("Failed to build self archive (init header): %s", err)
 	}
 	if _, err := w.Write(selfData); err != nil {
-		return nil, fmt.Errorf("Failed to build self archive (data): %s", err)
+		return nil, fmt.Errorf("Failed to build self archive (init data): %s", err)
+	}
+
+	if err := w.WriteHeader(wharfratHdr); err != nil {
+		return nil, fmt.Errorf("Failed to build self archive (wharfrat header): %s", err)
+	}
+	if _, err := w.Write(selfData); err != nil {
+		return nil, fmt.Errorf("Failed to build self archive (wharfrat data): %s", err)
+	}
+
+	if err := w.WriteHeader(wrHdr); err != nil {
+		return nil, fmt.Errorf("Failed to build self archive (wr header): %s", err)
 	}
 
 	return buf, nil
@@ -173,7 +208,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 	cid := create.ID
 
-	if err := c.c.CopyToContainer(c.ctx, cid, "/sbin", self, types.CopyToContainerOptions{CopyUIDGID: false}); err != nil {
+	if err := c.c.CopyToContainer(c.ctx, cid, "/", self, types.CopyToContainerOptions{}); err != nil {
 		return "", err
 	}
 
