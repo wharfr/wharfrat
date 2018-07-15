@@ -224,11 +224,19 @@ func (l *List) Execute(args []string) error {
 	} else {
 		prefix := projects.Prefix()
 		log.Printf("PROJECT PREFIX: %s", prefix)
-		for i, entry := range entries {
-			short := strings.Replace(entry.project.str, prefix, "...", 1)
-			entries[i].project.str = short
-			if len(short) > maxProject {
-				maxProject = len(short)
+		if len(prefix) > 3 {
+			for i, entry := range entries {
+				short := strings.Replace(entry.project.str, prefix, "...", 1)
+				entries[i].project.str = short
+				if len(short) > maxProject {
+					maxProject = len(short)
+				}
+			}
+		} else {
+			for _, entry := range entries {
+				if len(entry.project.str) > maxProject {
+					maxProject = len(entry.project.str)
+				}
 			}
 		}
 
