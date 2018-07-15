@@ -7,6 +7,7 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/environ"
 )
 
 type Run struct {
@@ -48,6 +49,16 @@ func (opts *Run) client(args []string) (int, error) {
 	log.Printf("Crate: %#v", crate)
 
 	log.Printf("Container: %s", crate.ContainerName())
+
+	if environ.InContainer() {
+		if len(args) == 0 {
+			// nothing to do, interactive session requested, but we are already
+			// in container.
+			log.Printf("Already in container, nothing to do.")
+			return 0, nil
+		}
+		return environ.Exec(args, crate, opts.User, opts.Workdir)
+	}
 
 	c, err := docker.Connect()
 	if err != nil {
