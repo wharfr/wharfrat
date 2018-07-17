@@ -6,9 +6,11 @@ import (
 	"log"
 	"os"
 
-	flags "github.com/jessevdk/go-flags"
 	"wharfr.at/wharfrat/lib/cmd/wharfrat"
 	"wharfr.at/wharfrat/lib/version"
+
+	flags "github.com/jessevdk/go-flags"
+	shellwords "github.com/mattn/go-shellwords"
 )
 
 type options struct {
@@ -32,10 +34,13 @@ func Main(name string) int {
 	parser.Usage = "[OPTIONS] [cmd [args...]]"
 
 	args := append([]string{name}, os.Args[1:]...)
-	options := []string{}
-	// TODO(jp3): split WHARFRAT_OPTIONS for parsing
 
-	_, err := parser.ParseArgs(options)
+	options, err := shellwords.Parse(os.Getenv("WHARFRAT_OPTIONS"))
+	if err != nil {
+		return fatal("%s", err)
+	}
+
+	_, err = parser.ParseArgs(options)
 	if flagErr, ok := err.(*flags.Error); ok && flagErr.Type == flags.ErrHelp {
 		return 0
 	} else if err != nil {
