@@ -56,6 +56,17 @@ default = "main"
 [crates.local]
   image = "localhost:5000/some/image"
 
+[crates.dev]
+  image = "wharfr/dev"
+  mount-home = false
+  project-mount = "/go/src/wharfr.at/wharfrat"
+  working-dir = "project, match"
+  shell = "/bin/bash"
+  env-blacklist = ["GOPATH"]
+  volumes = ["/var/run/docker.sock:/var/run/docker.sock"]
+  groups = ["docker"]
+  copy-groups = ["docker"]
+
 [crates.docs]
   image = "wharfr/docs"
   mount-home = false
