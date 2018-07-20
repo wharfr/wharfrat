@@ -61,7 +61,6 @@ default = "main"
   mount-home = false
   project-mount = "/go/src/wharfr.at/wharfrat"
   working-dir = "project, match"
-  shell = "/bin/bash"
   env-blacklist = ["GOPATH"]
   volumes = ["/var/run/docker.sock:/var/run/docker.sock"]
   groups = ["docker"]

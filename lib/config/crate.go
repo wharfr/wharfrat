@@ -107,6 +107,11 @@ func openCrate(project *Project, crateName, branch string) (*Crate, error) {
 	}
 
 	if crate.Shell == "" {
+		// First default is the user's current shell
+		crate.Shell = os.Getenv("SHELL")
+	}
+	if crate.Shell == "" {
+		// Final fallback is /bin/sh
 		crate.Shell = "/bin/sh"
 	}
 
