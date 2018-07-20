@@ -108,7 +108,6 @@ func (p *Proxy) Execute(args []string) error {
 	if err := unix.Setgroups(groups); err != nil {
 		fmt.Printf("Failed to set groups: %s\n", err)
 	}
-	gids, err := unix.Getgroups()
 
 	if err := unix.Setreuid(os.Getuid(), os.Getuid()); err != nil {
 		return fmt.Errorf("Failed to set UID: %s")
