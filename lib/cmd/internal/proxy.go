@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"runtime"
 	"strconv"
 	"syscall"
 
@@ -63,6 +64,10 @@ func (p *Proxy) Wait() error {
 }
 
 func (p *Proxy) Execute(args []string) error {
+	// Make sure that we control things as we expect
+	runtime.GOMAXPROCS(1)
+	runtime.LockOSThread()
+
 	log.Printf("PROXY: %s %#v", args, p)
 	if len(args) < 1 {
 		return fmt.Errorf("Need at least 1 argument for proxy")
