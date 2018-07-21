@@ -20,19 +20,19 @@ type Run struct {
 }
 
 func (opts *Run) stop(args []string) error {
-	crate, err := config.GetCrate(".", opts.Crate)
+	c, err := docker.Connect()
+	if err != nil {
+		return fmt.Errorf("Failed to create docker client: %s", err)
+	}
+	defer c.Close()
+
+	crate, err := config.GetCrate(".", opts.Crate, c)
 	if err != nil {
 		return fmt.Errorf("Config error: %s", err)
 	}
 	log.Printf("Crate: %#v", crate)
 
 	log.Printf("Container: %s", crate.ContainerName())
-
-	c, err := docker.Connect()
-	if err != nil {
-		return fmt.Errorf("Failed to create docker client: %s", err)
-	}
-	defer c.Close()
 
 	if err := c.EnsureStopped(crate.ContainerName()); err != nil {
 		return fmt.Errorf("Failed to stop container: %s", err)
@@ -42,7 +42,13 @@ func (opts *Run) stop(args []string) error {
 }
 
 func (opts *Run) client(args []string) (int, error) {
-	crate, err := config.GetCrate(".", opts.Crate)
+	c, err := docker.Connect()
+	if err != nil {
+		return 1, fmt.Errorf("Failed to create docker client: %s", err)
+	}
+	defer c.Close()
+
+	crate, err := config.GetCrate(".", opts.Crate, c)
 	if err != nil {
 		return 1, fmt.Errorf("Config error: %s", err)
 	}
@@ -59,12 +65,6 @@ func (opts *Run) client(args []string) (int, error) {
 		}
 		return environ.Exec(args, crate, opts.User, opts.Workdir)
 	}
-
-	c, err := docker.Connect()
-	if err != nil {
-		return 1, fmt.Errorf("Failed to create docker client: %s", err)
-	}
-	defer c.Close()
 
 	if opts.Clean {
 		if err := c.EnsureRemoved(crate.ContainerName()); err != nil {

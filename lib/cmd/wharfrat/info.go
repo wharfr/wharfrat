@@ -16,7 +16,13 @@ type Info struct {
 func (i *Info) Execute(args []string) error {
 	log.Printf("INFO: opts: %#v, args: %v", i, args)
 
-	crate, err := config.GetCrate(".", i.Crate)
+	client, err := docker.Connect()
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	crate, err := config.GetCrate(".", i.Crate, client)
 	if err != nil {
 		return fmt.Errorf("Config error: %s", err)
 	}
@@ -25,12 +31,6 @@ func (i *Info) Execute(args []string) error {
 	project := filepath.Dir(crate.ProjectPath())
 
 	log.Printf("Container: %s", crate.ContainerName())
-
-	client, err := docker.Connect()
-	if err != nil {
-		return err
-	}
-	defer client.Close()
 
 	cfg := ""
 	branch := "n/a"

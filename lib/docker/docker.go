@@ -209,3 +209,12 @@ func (c *Connection) Login(addr, user, pass string) (*types.AuthConfig, error) {
 func (c *Connection) Info() (types.Info, error) {
 	return c.c.Info(c.ctx)
 }
+
+func (c *Connection) ImageLabels(name string) (map[string]string, error) {
+	info, _, err := c.c.ImageInspectWithRaw(c.ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("IMAGE LABELS (%s): %#v", name, info.ContainerConfig.Labels)
+	return info.ContainerConfig.Labels, nil
+}

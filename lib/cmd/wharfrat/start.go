@@ -55,7 +55,7 @@ func (s *Start) Execute(args []string) error {
 			name = name[1:]
 		}
 
-		crate, err := config.OpenCrate(projectFile, crateName)
+		crate, err := config.OpenCrate(projectFile, crateName, client)
 		if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
 			return fmt.Errorf("Failed to lookup crate: %s", err)
 		}

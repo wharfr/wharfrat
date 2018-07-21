@@ -15,6 +15,10 @@ import (
 	"wharfr.at/wharfrat/lib/vc"
 )
 
+type LabelSource interface {
+	ImageLabels(name string) (map[string]string, error)
+}
+
 type Crate struct {
 	CapAdd       []string          `toml:"cap-add"`
 	CapDrop      []string          `toml:"cap-drop"`
@@ -60,7 +64,7 @@ func LocateCrate(start string) (string, error) {
 	return string(bytes.TrimSpace(data)), nil
 }
 
-func GetCrate(start, name string) (*Crate, error) {
+func GetCrate(start, name string, ls LabelSource) (*Crate, error) {
 	project, err := LocateProject(start)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse project file: %s", err)
@@ -89,21 +93,36 @@ func GetCrate(start, name string) (*Crate, error) {
 		log.Printf("Failed to get branch name: %s", err)
 	}
 
-	return openCrate(project, crateName, branch)
+	return openCrate(project, crateName, branch, ls)
 }
 
-func openCrate(project *Project, crateName, branch string) (*Crate, error) {
+func openCrate(project *Project, crateName, branch string, ls LabelSource) (*Crate, error) {
 	crate, ok := project.Crates[crateName]
 	if !ok {
 		return nil, CrateNotFound
+	}
+
+	if crate.Image == "" {
+		return nil, fmt.Errorf("image is a required parameter")
 	}
 
 	if !project.meta.IsDefined("crates", crateName, "mount-home") {
 		crate.MountHome = true
 	}
 
+	labels, err := ls.ImageLabels(crate.Image)
+	if err != nil {
+		return nil, err
+	}
+
 	if crate.Hostname == "" {
 		crate.Hostname = "dev"
+	}
+
+	if crate.Shell == "" {
+		// Initially we look at the image labels to see if there is a shell
+		// specified with the image
+		crate.Shell = labels["at.wharfr.wharfrat.shell"]
 	}
 
 	if crate.Shell == "" {
@@ -124,7 +143,7 @@ func openCrate(project *Project, crateName, branch string) (*Crate, error) {
 	return &crate, nil
 }
 
-func OpenCrate(projectPath, crateName string) (*Crate, error) {
+func OpenCrate(projectPath, crateName string, ls LabelSource) (*Crate, error) {
 	project, err := parse(projectPath)
 	if err != nil {
 		return nil, err
@@ -134,10 +153,10 @@ func OpenCrate(projectPath, crateName string) (*Crate, error) {
 	if err != nil {
 		log.Printf("Failed to get branch name: %s", err)
 	}
-	return openCrate(project, crateName, branch)
+	return openCrate(project, crateName, branch, ls)
 }
 
-func OpenVcCrate(projectPath, branch, crateName string) (*Crate, error) {
+func OpenVcCrate(projectPath, branch, crateName string, ls LabelSource) (*Crate, error) {
 	data, err := vc.BranchedFile(projectPath, branch)
 	if err != nil {
 		return nil, err
@@ -147,7 +166,7 @@ func OpenVcCrate(projectPath, branch, crateName string) (*Crate, error) {
 		return nil, err
 	}
 	project.path = projectPath
-	return openCrate(project, crateName, branch)
+	return openCrate(project, crateName, branch, ls)
 }
 
 func (c *Crate) ProjectPath() string {

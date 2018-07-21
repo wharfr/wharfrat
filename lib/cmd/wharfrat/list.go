@@ -136,7 +136,7 @@ func (l *List) Execute(args []string) error {
 			name = name[1:]
 		}
 		project := filepath.Dir(projectFile)
-		crate, err := config.OpenCrate(projectFile, crateName)
+		crate, err := config.OpenCrate(projectFile, crateName, client)
 		if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
 			return fmt.Errorf("Failed to lookup crate: %s", err)
 		}
@@ -160,7 +160,7 @@ func (l *List) Execute(args []string) error {
 		} else if branch != projectBranch {
 			if vc.KnownFile(projectFile, branch) {
 				log.Printf("OpenVcCrate: %s %s %s", projectFile, branch, crateName)
-				crate, err = config.OpenVcCrate(projectFile, branch, crateName)
+				crate, err = config.OpenVcCrate(projectFile, branch, crateName, client)
 				if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
 					return fmt.Errorf("Failed to lookup crate: %s", err)
 				}
