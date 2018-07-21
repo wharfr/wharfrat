@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	shellwords "github.com/mattn/go-shellwords"
 	"wharfr.at/wharfrat/lib/config"
 )
 
@@ -74,12 +75,23 @@ func (c *Connection) setupPrep(id, prep, path string, args ...string) error {
 	return nil
 }
 
-func (c *Connection) runScript(id, shell, label, script string, env map[string]string, args ...string) error {
+func (c *Connection) runScript(id, label, script string, env map[string]string) error {
 	if script == "" {
 		return nil
 	}
 
-	cmd := append([]string{shell, "-s"}, args...)
+	cmd := []string{"/bin/sh"}
+	if strings.HasPrefix(strings.TrimSpace(script), "#!") {
+		parts := strings.SplitN(strings.TrimSpace(script), "\n", 2)
+		items, err := shellwords.Parse(parts[0][2:])
+		if err != nil {
+			return err
+		}
+		cmd = items
+	}
+
+	log.Printf("RUN SCRIPT CMD: %#v", cmd)
+
 	stdin := strings.NewReader(script)
 
 	exitCode, err := c.run(id, cmd, env, stdin, os.Stdout, os.Stderr)
@@ -127,12 +139,12 @@ func (c *Connection) setupTarballs(id, base string, tarballs map[string]string) 
 	return nil
 }
 
-func (c *Connection) doSteps(id, shell, base, prep, pre, post string, tarballs, env map[string]string, args ...string) error {
+func (c *Connection) doSteps(id, base, prep, pre, post string, tarballs, env map[string]string, args ...string) error {
 	if err := c.setupPrep(id, prep, base, args...); err != nil {
 		return err
 	}
 
-	if err := c.runScript(id, shell, "pre", pre, env); err != nil {
+	if err := c.runScript(id, "pre", pre, env); err != nil {
 		return err
 	}
 
@@ -140,7 +152,7 @@ func (c *Connection) doSteps(id, shell, base, prep, pre, post string, tarballs, 
 		return err
 	}
 
-	if err := c.runScript(id, shell, "post", post, env); err != nil {
+	if err := c.runScript(id, "post", post, env); err != nil {
 		return err
 	}
 
@@ -175,11 +187,11 @@ func (c *Connection) setup(id string, crate *config.Crate) error {
 		"WR_CRATE":       crate.Name(),
 	}
 
-	if err := c.doSteps(id, crate.Shell, projectPath, crate.SetupPrep, crate.SetupPre, crate.SetupPost, crate.Tarballs, env, projectPath, crate.Name()); err != nil {
+	if err := c.doSteps(id, projectPath, crate.SetupPrep, crate.SetupPre, crate.SetupPost, crate.Tarballs, env, projectPath, crate.Name()); err != nil {
 		return err
 	}
 
-	if err := c.doSteps(id, crate.Shell, localPath, local.SetupPrep, local.SetupPre, local.SetupPost, local.Tarballs, env, projectPath, crate.Name()); err != nil {
+	if err := c.doSteps(id, localPath, local.SetupPrep, local.SetupPre, local.SetupPost, local.Tarballs, env, projectPath, crate.Name()); err != nil {
 		return err
 	}
 

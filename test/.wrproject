@@ -26,6 +26,7 @@ default = "main"
     exit 0
   """
   setup-pre = """
+    #!/bin/bash
     mkdir -p /test
     echo -n "PRE: " >> /test/setup.log
     date >> /test/setup.log
