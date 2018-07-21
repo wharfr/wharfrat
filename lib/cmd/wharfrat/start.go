@@ -8,6 +8,7 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/docker/label"
 )
 
 type Start struct {
@@ -47,8 +48,8 @@ func (s *Start) Execute(args []string) error {
 	log.Printf("FOUND: %d", len(containers))
 
 	for _, container := range containers {
-		projectFile := container.Labels[docker.LabelProject]
-		crateName := container.Labels[docker.LabelCrate]
+		projectFile := container.Labels[label.Project]
+		crateName := container.Labels[label.Crate]
 
 		name := container.Names[0]
 		if strings.HasPrefix(name, "/") {

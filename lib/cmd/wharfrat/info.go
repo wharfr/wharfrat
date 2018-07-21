@@ -7,6 +7,7 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/docker/label"
 )
 
 type Info struct {
@@ -45,8 +46,8 @@ func (i *Info) Execute(args []string) error {
 	log.Printf("CONTAINER: %#v", container)
 
 	if container != nil {
-		cfg = container.Config.Labels[docker.LabelConfig]
-		branch = container.Config.Labels[docker.LabelBranch]
+		cfg = container.Config.Labels[label.Config]
+		branch = container.Config.Labels[label.Branch]
 
 		v4 := container.NetworkSettings.IPAddress
 		v6 := container.NetworkSettings.GlobalIPv6Address

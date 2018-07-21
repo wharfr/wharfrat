@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker/label"
 	"wharfr.at/wharfrat/lib/vc"
 
 	"github.com/docker/distribution/reference"
@@ -106,16 +107,16 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	labels := map[string]string{
-		LabelProject: crate.ProjectPath(),
-		LabelCrate:   crate.Name(),
-		LabelConfig:  crate.Json(),
+		label.Project: crate.ProjectPath(),
+		label.Crate:   crate.Name(),
+		label.Config:  crate.Json(),
 	}
 
 	projectDir := filepath.Dir(crate.ProjectPath())
 	if branch, err := vc.Branch(projectDir); err != nil {
 		log.Printf("Failed to get vc branch: %s", err)
 	} else {
-		labels[LabelBranch] = branch
+		labels[label.Branch] = branch
 	}
 
 	exposed, ports, err := nat.ParsePortSpecs(crate.Ports)

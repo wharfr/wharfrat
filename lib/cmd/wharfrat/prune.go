@@ -9,6 +9,7 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/docker/label"
 	"wharfr.at/wharfrat/lib/vc"
 )
 
@@ -33,9 +34,9 @@ func (p *Prune) Execute(args []string) error {
 	missing := []string{}
 
 	for _, container := range containers {
-		projectFile := container.Labels[docker.LabelProject]
-		crateName := container.Labels[docker.LabelCrate]
-		branch := container.Labels[docker.LabelBranch]
+		projectFile := container.Labels[label.Project]
+		crateName := container.Labels[label.Crate]
+		branch := container.Labels[label.Branch]
 
 		name := container.Names[0]
 		if strings.HasPrefix(name, "/") {

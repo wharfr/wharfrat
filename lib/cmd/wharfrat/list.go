@@ -9,6 +9,7 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/docker/label"
 	"wharfr.at/wharfrat/lib/vc"
 )
 
@@ -126,10 +127,10 @@ func (l *List) Execute(args []string) error {
 	projects := tree{}
 
 	for _, container := range containers {
-		projectFile := container.Labels[docker.LabelProject]
-		crateName := container.Labels[docker.LabelCrate]
-		cfg := container.Labels[docker.LabelConfig]
-		branch := container.Labels[docker.LabelBranch]
+		projectFile := container.Labels[label.Project]
+		crateName := container.Labels[label.Crate]
+		cfg := container.Labels[label.Config]
+		branch := container.Labels[label.Branch]
 
 		name := container.Names[0]
 		if strings.HasPrefix(name, "/") {

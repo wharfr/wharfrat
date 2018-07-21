@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"wharfr.at/wharfrat/lib/docker/label"
 	"wharfr.at/wharfrat/lib/vc"
 )
 
@@ -122,7 +123,7 @@ func openCrate(project *Project, crateName, branch string, ls LabelSource) (*Cra
 	if crate.Shell == "" {
 		// Initially we look at the image labels to see if there is a shell
 		// specified with the image
-		crate.Shell = labels["at.wharfr.wharfrat.shell"]
+		crate.Shell = labels[label.Shell]
 	}
 
 	if crate.Shell == "" {

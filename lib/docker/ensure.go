@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker/label"
 
 	"github.com/docker/docker/api/types"
 )
@@ -21,7 +22,7 @@ func (c *Connection) EnsureRunning(crate *config.Crate, force bool) (string, err
 
 	log.Printf("FOUND %s %s", container.ID, container.State)
 
-	oldJson := container.Config.Labels[LabelConfig]
+	oldJson := container.Config.Labels[label.Config]
 	if oldJson != crate.Json() && !force {
 		return "", fmt.Errorf("Container built from old config")
 	}

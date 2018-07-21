@@ -9,26 +9,13 @@ import (
 	"strings"
 
 	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker/label"
 
 	"github.com/docker/docker/api"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"golang.org/x/net/context"
-)
-
-const (
-	domain       = "at.wharfr.wharfrat"
-	LabelProject = domain + ".project"
-	LabelCrate   = domain + ".crate"
-	LabelConfig  = domain + ".config"
-	LabelBranch  = domain + ".branch"
-
-	oldDomain       = "me.qur.wharf-rat"
-	oldLabelProject = oldDomain + ".project"
-	oldLabelCrate   = oldDomain + ".crate"
-	oldLabelConfig  = oldDomain + ".config"
-	oldLabelBranch  = oldDomain + ".branch"
 )
 
 type Connection struct {
@@ -38,21 +25,6 @@ type Connection struct {
 
 func Version() string {
 	return api.DefaultVersion
-}
-
-func fixOldLabels(labels map[string]string) {
-	project, found := labels[oldLabelProject]
-	if !found {
-		return
-	}
-	labels[LabelProject] = project
-	labels[LabelCrate] = labels[oldLabelCrate]
-	labels[LabelConfig] = labels[oldLabelConfig]
-	labels[LabelBranch] = labels[oldLabelBranch]
-	delete(labels, oldLabelProject)
-	delete(labels, oldLabelCrate)
-	delete(labels, oldLabelConfig)
-	delete(labels, oldLabelBranch)
 }
 
 func Connect() (*Connection, error) {
@@ -83,18 +55,18 @@ func (c *Connection) Close() error {
 func (c *Connection) List() ([]types.Container, error) {
 	old, err := c.c.ContainerList(c.ctx, types.ContainerListOptions{
 		All:     true,
-		Filters: filters.NewArgs(filters.Arg("label", oldLabelProject)),
+		Filters: filters.NewArgs(filters.Arg("label", label.OldProject)),
 	})
 	if err != nil {
 		return nil, err
 	}
 	for _, c := range old {
 		log.Printf("OLD: %s", c.ID)
-		fixOldLabels(c.Labels)
+		label.FixOld(c.Labels)
 	}
 	new, err := c.c.ContainerList(c.ctx, types.ContainerListOptions{
 		All:     true,
-		Filters: filters.NewArgs(filters.Arg("label", LabelProject)),
+		Filters: filters.NewArgs(filters.Arg("label", label.Project)),
 	})
 	if err != nil {
 		return nil, err
@@ -108,7 +80,7 @@ func (c *Connection) GetContainer(name string) (*types.ContainerJSON, error) {
 		return nil, nil
 	}
 	if container.Config != nil {
-		fixOldLabels(container.Config.Labels)
+		label.FixOld(container.Config.Labels)
 	}
 	return &container, err
 }
