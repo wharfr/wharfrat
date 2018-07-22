@@ -10,7 +10,11 @@ Welcome to wharfrat's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
+   introduction
+   installation
+   basics
+   configuration
+   examples
 
 Indices and tables
 ==================
