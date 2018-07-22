@@ -185,6 +185,9 @@ func (c *Connection) Info() (types.Info, error) {
 func (c *Connection) ImageLabels(name string) (map[string]string, error) {
 	info, _, err := c.c.ImageInspectWithRaw(c.ctx, name)
 	if err != nil {
+		if client.IsErrNotFound(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	log.Printf("IMAGE LABELS (%s): %#v", name, info.ContainerConfig.Labels)
