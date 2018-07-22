@@ -41,7 +41,7 @@ type Crate struct {
 	Tmpfs        []string          `toml:"tmpfs"`
 	Volumes      []string          `toml:"volumes"`
 	WorkingDir   string            `toml:"working-dir"`
-	projectPath  string
+	project      *Project
 	name         string
 	branch       string
 }
@@ -107,37 +107,13 @@ func openCrate(project *Project, crateName, branch string, ls LabelSource) (*Cra
 		return nil, fmt.Errorf("image is a required parameter")
 	}
 
-	if !project.meta.IsDefined("crates", crateName, "mount-home") {
-		crate.MountHome = true
-	}
-
-	labels, err := ls.ImageLabels(crate.Image)
-	if err != nil {
-		return nil, err
-	}
-
-	if crate.Hostname == "" {
-		crate.Hostname = "dev"
-	}
-
-	if crate.Shell == "" {
-		// Initially we look at the image labels to see if there is a shell
-		// specified with the image
-		crate.Shell = labels[label.Shell]
-	}
-
-	if crate.Shell == "" {
-		// First default is the user's current shell
-		crate.Shell = os.Getenv("SHELL")
-	}
-	if crate.Shell == "" {
-		// Final fallback is /bin/sh
-		crate.Shell = "/bin/sh"
-	}
-
-	crate.projectPath = project.path
+	crate.project = project
 	crate.name = crateName
 	crate.branch = branch
+
+	if err := crate.SetDefaults(ls); err != nil {
+		return nil, err
+	}
 
 	log.Printf("Crate: %s, Image: %s", crateName, crate.Image)
 
@@ -170,8 +146,48 @@ func OpenVcCrate(projectPath, branch, crateName string, ls LabelSource) (*Crate,
 	return openCrate(project, crateName, branch, ls)
 }
 
+func (c *Crate) SetDefaults(ls LabelSource) error {
+	if !c.project.meta.IsDefined("crates", c.name, "mount-home") {
+		c.MountHome = true
+	}
+
+	if !c.project.meta.IsDefined("crates", c.name, "hostname") {
+		c.Hostname = ""
+	}
+
+	if !c.project.meta.IsDefined("crates", c.name, "shell") {
+		c.Shell = ""
+	}
+
+	labels, err := ls.ImageLabels(c.Image)
+	if err != nil {
+		return err
+	}
+
+	if c.Hostname == "" {
+		c.Hostname = "dev"
+	}
+
+	if c.Shell == "" {
+		// Initially we look at the image labels to see if there is a shell
+		// specified with the image
+		c.Shell = labels[label.Shell]
+	}
+
+	if c.Shell == "" {
+		// First default is the user's current shell
+		c.Shell = os.Getenv("SHELL")
+	}
+	if c.Shell == "" {
+		// Final fallback is /bin/sh
+		c.Shell = "/bin/sh"
+	}
+
+	return nil
+}
+
 func (c *Crate) ProjectPath() string {
-	return c.projectPath
+	return c.project.path
 }
 
 func (c *Crate) Name() string {
@@ -180,7 +196,7 @@ func (c *Crate) Name() string {
 
 func (c *Crate) ContainerName() string {
 	h := md5.New()
-	_, err := h.Write([]byte(c.projectPath))
+	_, err := h.Write([]byte(c.project.path))
 	if err != nil {
 		panic("Failed to write project path: " + err.Error())
 	}

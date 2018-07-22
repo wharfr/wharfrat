@@ -199,6 +199,13 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 			return "", err
 		}
 
+		// Give crate another go at setting defaults now we have the image
+		if err := crate.SetDefaults(c); err != nil {
+			return "", err
+		}
+		// Crate config may have changed
+		labels[label.Config] = crate.Json()
+
 		var retryErr error
 		create, retryErr = c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, crate.ContainerName())
 		if retryErr != nil {
