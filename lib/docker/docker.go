@@ -193,3 +193,11 @@ func (c *Connection) ImageLabels(name string) (map[string]string, error) {
 	log.Printf("IMAGE LABELS (%s): %#v", name, info.ContainerConfig.Labels)
 	return info.ContainerConfig.Labels, nil
 }
+
+func (c *Connection) GetImage(name string) (*types.ImageInspect, error) {
+	info, _, err := c.c.ImageInspectWithRaw(c.ctx, name)
+	if client.IsErrNotFound(err) {
+		return nil, nil
+	}
+	return &info, err
+}

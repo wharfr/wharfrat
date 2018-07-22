@@ -27,6 +27,16 @@ func (c *Connection) EnsureRunning(crate *config.Crate, force bool) (string, err
 		return "", fmt.Errorf("Container built from old config")
 	}
 
+	image, err := c.GetImage(crate.Image)
+	if err != nil {
+		return "", err
+	}
+
+	if container.Image != image.ID && !force {
+		log.Printf("CONTAINER IMAGE: wanted \"%s\", got \"%s\"", image.ID, container.Image)
+		return "", fmt.Errorf("Container built from wrong (old?) image")
+	}
+
 	switch container.State.Status {
 	case "created":
 		return "", fmt.Errorf("State %s NOT IMPLEMENTED", container.State)
