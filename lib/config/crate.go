@@ -125,6 +125,15 @@ func OpenCrate(projectPath, crateName string, ls LabelSource) (*Crate, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if crateName == "" {
+		crateName = project.Default
+	}
+
+	if crateName == "" {
+		crateName = "default"
+	}
+
 	projectDir := filepath.Dir(projectPath)
 	branch, err := vc.Branch(projectDir)
 	if err != nil {
