@@ -1,4 +1,8 @@
-#!/usr/bin/env -S wr /bin/bash
+#!/bin/bash
+
+if [ -z "$WHARFRAT_NAME" ]; then
+    exec wr "$0" "$@";
+fi
 
 set -e
 
