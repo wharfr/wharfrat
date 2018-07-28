@@ -1,0 +1,15 @@
+#!/usr/bin/env -S wr /bin/bash
+
+set -e
+
+cd "$(dirname "$0")/cmd/wharfrat"
+
+ver=$(
+cat << EOF | base64 -w 0
+{"version":"$(git describe --dirty --match "v[0-9]*")","commit":"$(git rev-parse HEAD)","buildtime":"$(date --utc +%Y-%m-%dT%H:%M:%SZ)"}
+EOF
+)
+
+CGO_ENABLED=0 go build -a -tags netgo -installsuffix . -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}"
+
+echo "built cmd/wharfrat/wharfrat"
