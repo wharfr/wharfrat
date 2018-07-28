@@ -14,6 +14,7 @@ Welcome to wharfrat's documentation!
    installation
    basics
    configuration
+   accessing-containers
    examples
 
 Indices and tables
