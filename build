@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -e
+
+cd "$(dirname "$0")"
+
+# Make sure the build is running inside the dev container
+if [ -z "$WHARFRAT_NAME" ]; then
+    wr="wr"
+
+    # We would prefer to use the last built version if there is one
+    if [ -x dist/wharfrat ]; then
+        ln -sf wharfrat dist/wr
+        wr="$(pwd)/dist/wr";
+    fi
+
+    if ! "$wr" --force true 2> /dev/null; then
+        # We need to bootstrap the build by using docker directly
+        echo "bootstrap ...";
+        mkdir -p dist/bootstrap
+        docker run -it --rm -v $(pwd):/go/src/wharfr.at/wharfrat wharfr/dev go build -o /go/src/wharfr.at/wharfrat/dist/bootstrap/wr wharfr.at/wharfrat/cmd/wr
+        wr="$(pwd)/dist/bootstrap/wr";
+    fi
+
+    exec "$wr" "./$(basename "$0")" "$@";
+fi
+
+ver=$(
+cat << EOF | base64 -w 0
+{"version":"$(git describe --dirty --match "v[0-9]*")","commit":"$(git rev-parse HEAD)","buildtime":"$(date --utc +%Y-%m-%dT%H:%M:%SZ)"}
+EOF
+)
+
+CGO_ENABLED=0 go build -a -tags netgo -installsuffix . -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" -o dist/wharfrat ./cmd/wharfrat
+ln -sf wharfrat dist/wr
+
+echo "built dist/wharfrat"

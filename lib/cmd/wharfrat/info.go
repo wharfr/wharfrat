@@ -5,8 +5,9 @@ import (
 	"log"
 	"path/filepath"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
-	"git.qur.me/qur/wharf_rat/lib/docker"
+	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/docker/label"
 )
 
 type Info struct {
@@ -16,7 +17,13 @@ type Info struct {
 func (i *Info) Execute(args []string) error {
 	log.Printf("INFO: opts: %#v, args: %v", i, args)
 
-	crate, err := config.GetCrate(".", i.Crate)
+	client, err := docker.Connect()
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	crate, err := config.GetCrate(".", i.Crate, client)
 	if err != nil {
 		return fmt.Errorf("Config error: %s", err)
 	}
@@ -25,12 +32,6 @@ func (i *Info) Execute(args []string) error {
 	project := filepath.Dir(crate.ProjectPath())
 
 	log.Printf("Container: %s", crate.ContainerName())
-
-	client, err := docker.Connect()
-	if err != nil {
-		return err
-	}
-	defer client.Close()
 
 	cfg := ""
 	branch := "n/a"
@@ -45,8 +46,8 @@ func (i *Info) Execute(args []string) error {
 	log.Printf("CONTAINER: %#v", container)
 
 	if container != nil {
-		cfg = container.Config.Labels["me.qur.wharf-rat.config"]
-		branch = container.Config.Labels["me.qur.wharf-rat.branch"]
+		cfg = container.Config.Labels[label.Config]
+		branch = container.Config.Labels[label.Branch]
 
 		v4 := container.NetworkSettings.IPAddress
 		v6 := container.NetworkSettings.GlobalIPv6Address

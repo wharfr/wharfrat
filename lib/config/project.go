@@ -10,6 +10,7 @@ type Project struct {
 	Default string
 	Crates  map[string]Crate
 	path    string
+	meta    toml.MetaData
 }
 
 const NotFound = notFound("Not Found")
@@ -24,6 +25,7 @@ func parse(path string) (*Project, error) {
 	log.Printf("Project File: %s", path)
 	log.Printf("Project: %#v", project)
 	project.path = path
+	project.meta = md
 	return &project, nil
 }
 

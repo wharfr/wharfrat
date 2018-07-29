@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"git.qur.me/qur/wharf_rat/lib/cmd"
+	"wharfr.at/wharfrat/lib/cmd"
 )
 
 func main() {

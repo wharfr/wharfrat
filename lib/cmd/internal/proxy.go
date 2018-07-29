@@ -5,9 +5,13 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
+	"runtime"
+	"strconv"
 	"syscall"
 
 	"github.com/docker/docker/pkg/term"
+	"golang.org/x/sys/unix"
 )
 
 type args struct {
@@ -17,8 +21,9 @@ type args struct {
 }
 
 type Proxy struct {
-	Sync    bool   `long:"sync"`
-	Workdir string `long:"workdir"`
+	Sync    bool     `long:"sync"`
+	Workdir string   `long:"workdir"`
+	Groups  []string `long:"group"`
 	//	Args    args `positional-args:"true" required:"true"`
 }
 
@@ -59,6 +64,10 @@ func (p *Proxy) Wait() error {
 }
 
 func (p *Proxy) Execute(args []string) error {
+	// Make sure that we control things as we expect
+	runtime.GOMAXPROCS(1)
+	runtime.LockOSThread()
+
 	log.Printf("PROXY: %s %#v", args, p)
 	if len(args) < 1 {
 		return fmt.Errorf("Need at least 1 argument for proxy")
@@ -79,12 +88,45 @@ func (p *Proxy) Execute(args []string) error {
 		}
 	}
 
+	u, err := user.LookupId(strconv.Itoa(os.Getuid()))
+	if err != nil {
+		return fmt.Errorf("Failed to lookup current user: %s", err)
+	}
+	gid, err := strconv.Atoi(u.Gid)
+	if err != nil {
+		return fmt.Errorf("Invalid GID '%s': %s", u.Gid, err)
+	}
+	groups := []int{gid}
+	for _, name := range p.Groups {
+		group, err := user.LookupGroup(name)
+		if err != nil {
+			log.Printf("Failed to lookup group '%s': %s", name, err)
+			continue
+		}
+		gid, err := strconv.Atoi(group.Gid)
+		if err != nil {
+			log.Printf("Invalid GID '%s' for group '%s': %s", u.Gid, name, err)
+			continue
+		}
+		groups = append(groups, gid)
+	}
+	if err := unix.Setgroups(groups); err != nil {
+		fmt.Printf("Failed to set groups: %s\n", err)
+	}
+
+	if err := unix.Setreuid(os.Getuid(), os.Getuid()); err != nil {
+		return fmt.Errorf("Failed to set UID: %s")
+	}
+
+	env := []string{"USER=" + u.Username}
+	env = append(env, os.Environ()...)
+
 	cmd, err := exec.LookPath(args[0])
 	if err != nil {
 		return fmt.Errorf("Failed to find %s: %s", args[0], err)
 	}
 
-	if err := syscall.Exec(cmd, args, os.Environ()); err != nil {
+	if err := syscall.Exec(cmd, args, env); err != nil {
 		return fmt.Errorf("Failed to exec %s: %s", err)
 	}
 	return nil

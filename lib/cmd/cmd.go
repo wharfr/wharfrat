@@ -1,21 +1,37 @@
 package cmd
 
 import (
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"git.qur.me/qur/wharf_rat/lib/cmd/internal"
-	"git.qur.me/qur/wharf_rat/lib/cmd/wharfrat"
-	"git.qur.me/qur/wharf_rat/lib/cmd/wr"
+	"wharfr.at/wharfrat/lib/cmd/exec"
+	"wharfr.at/wharfrat/lib/cmd/internal"
+	"wharfr.at/wharfrat/lib/cmd/proxy"
+	"wharfr.at/wharfrat/lib/cmd/wharfrat"
+	"wharfr.at/wharfrat/lib/cmd/wr"
 )
 
 func Main() int {
-	switch filepath.Base(os.Args[0]) {
+	name := filepath.Base(os.Args[0])
+	if strings.HasPrefix(name, "wr-") {
+		switch name[3:] {
+		case "exec":
+			return exec.Main()
+		case "init":
+			return internal.Main()
+		default:
+			log.Printf("ERROR: Unknown alias: %s", name)
+			return 1
+		}
+	}
+	switch name {
 	case "wr":
 		return wr.Main()
-	case "wr-init":
-		return internal.Main()
-	default:
+	case "wharfrat":
 		return wharfrat.Main()
+	default:
+		return proxy.Main(name)
 	}
 }

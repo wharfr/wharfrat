@@ -1,0 +1,9 @@
+#!/bin/bash
+
+PLATFORM="Linux"
+ARCH="64bit"
+
+LATEST="$(curl -s -D- https://github.com/gohugoio/hugo/releases/latest | sed -re 's#\x0d##g' | awk '/Location/{print }')"
+LATEST="${LATEST##*/v}"
+URL="https://github.com/gohugoio/hugo/releases/download/v${LATEST}/hugo_${LATEST}_${PLATFORM}-${ARCH}.tar.gz"
+curl -sL "$URL" | tar zx hugo

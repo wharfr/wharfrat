@@ -6,8 +6,9 @@ import (
 	"log"
 	"os"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
-	"git.qur.me/qur/wharf_rat/lib/docker"
+	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker"
+
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/docker/registry"
 )

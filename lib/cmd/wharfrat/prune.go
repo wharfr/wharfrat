@@ -7,9 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
-	"git.qur.me/qur/wharf_rat/lib/docker"
-	"git.qur.me/qur/wharf_rat/lib/vc"
+	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/docker/label"
+	"wharfr.at/wharfrat/lib/vc"
 )
 
 type Prune struct {
@@ -33,16 +34,16 @@ func (p *Prune) Execute(args []string) error {
 	missing := []string{}
 
 	for _, container := range containers {
-		projectFile := container.Labels["me.qur.wharf-rat.project"]
-		crateName := container.Labels["me.qur.wharf-rat.crate"]
-		branch := container.Labels["me.qur.wharf-rat.branch"]
+		projectFile := container.Labels[label.Project]
+		crateName := container.Labels[label.Crate]
+		branch := container.Labels[label.Branch]
 
 		name := container.Names[0]
 		if strings.HasPrefix(name, "/") {
 			name = name[1:]
 		}
 		project := filepath.Dir(projectFile)
-		crate, err := config.OpenCrate(projectFile, crateName)
+		crate, err := config.OpenCrate(projectFile, crateName, client)
 		if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
 			return fmt.Errorf("Failed to lookup crate: %s", err)
 		}
@@ -58,7 +59,7 @@ func (p *Prune) Execute(args []string) error {
 			crate = nil
 			if vc.KnownFile(projectFile, branch) {
 				log.Printf("OpenVcCrate: %s %s %s", projectFile, branch, crateName)
-				crate, err = config.OpenVcCrate(projectFile, branch, crateName)
+				crate, err = config.OpenVcCrate(projectFile, branch, crateName, client)
 				if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
 					return fmt.Errorf("Failed to lookup crate: %s", err)
 				}

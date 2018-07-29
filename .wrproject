@@ -1,57 +1,20 @@
-default = "main"
+default = "dev"
 
-[crates.default]
-  image = "default"
-
-[crates.main]
-  image = "main"
-
-[crates.alpha]
-  image = "alpha"
-
-[crates.beta]
-  image = "other/beta:0.1"
-
-[crates.ubuntu]
-  image = "ubuntu"
-  hostname = "test"
-  groups = ["sudo"]
-  volumes = ["/alpha"]
-  tmpfs = ["/var/tmp:rw,exec"]
-  project-mount = "/path/to/project"
+[crates.dev]
+  image = "wharfr/dev"
+  mount-home = false
+  project-mount = "/go/src/wharfr.at/wharfrat"
   working-dir = "project, match"
-  cap-add = ["SYS_PTRACE"]
-  setup-prep = """
-    pwd
-    exit 0
-  """
-  setup-pre = """
-    mkdir -p /test
-    echo -n "PRE: " >> /test/setup.log
-    date >> /test/setup.log
-    env >> /test/setup.log
-    echo "----" >> /test/setup.log
-    ls -l /test >> /test/setup.log
-    echo "PRE COMPLETE"
-  """
-  setup-post = """
-    mkdir -p /test
-    echo -n "POST: " >> /test/setup.log
-    date >> /test/setup.log
-    env >> /test/setup.log
-    echo "----" >> /test/setup.log
-    ls -l /test >> /test/setup.log
-    echo "POST COMPLETE"
-  """
-  [crates.ubuntu.tarballs]
-      "test.tgz" = "/test"
-      #"/tmp/test.tgz" = "/test/foo"
-  [crates.ubuntu.env]
-      "INSIDE_CRATE" = "true"
+  env-blacklist = ["GOPATH"]
 
-[crates.ubuntu-lts]
-  image = "ubuntu:16.04"
-  hostname = "test"
+[crates.docs]
+  image = "wharfr/docs"
+  mount-home = false
+  project-mount = "/wharfrat"
+  working-dir = "project, match"
 
-[crates.local]
-  image = "localhost:5000/some/image"
+[crates.rpm]
+  image = "wharfr/rpm"
+  mount-home = false
+  project-mount = "/wharfrat"
+  working-dir = "project, match"

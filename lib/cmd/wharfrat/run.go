@@ -5,8 +5,9 @@ import (
 	"log"
 	"os"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
-	"git.qur.me/qur/wharf_rat/lib/docker"
+	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/environ"
 )
 
 type Run struct {
@@ -19,19 +20,19 @@ type Run struct {
 }
 
 func (opts *Run) stop(args []string) error {
-	crate, err := config.GetCrate(".", opts.Crate)
+	c, err := docker.Connect()
+	if err != nil {
+		return fmt.Errorf("Failed to create docker client: %s", err)
+	}
+	defer c.Close()
+
+	crate, err := config.GetCrate(".", opts.Crate, c)
 	if err != nil {
 		return fmt.Errorf("Config error: %s", err)
 	}
 	log.Printf("Crate: %#v", crate)
 
 	log.Printf("Container: %s", crate.ContainerName())
-
-	c, err := docker.Connect()
-	if err != nil {
-		return fmt.Errorf("Failed to create docker client: %s", err)
-	}
-	defer c.Close()
 
 	if err := c.EnsureStopped(crate.ContainerName()); err != nil {
 		return fmt.Errorf("Failed to stop container: %s", err)
@@ -41,7 +42,13 @@ func (opts *Run) stop(args []string) error {
 }
 
 func (opts *Run) client(args []string) (int, error) {
-	crate, err := config.GetCrate(".", opts.Crate)
+	c, err := docker.Connect()
+	if err != nil {
+		return 1, fmt.Errorf("Failed to create docker client: %s", err)
+	}
+	defer c.Close()
+
+	crate, err := config.GetCrate(".", opts.Crate, c)
 	if err != nil {
 		return 1, fmt.Errorf("Config error: %s", err)
 	}
@@ -49,11 +56,15 @@ func (opts *Run) client(args []string) (int, error) {
 
 	log.Printf("Container: %s", crate.ContainerName())
 
-	c, err := docker.Connect()
-	if err != nil {
-		return 1, fmt.Errorf("Failed to create docker client: %s", err)
+	if environ.InContainer() {
+		if len(args) == 0 {
+			// nothing to do, interactive session requested, but we are already
+			// in container.
+			log.Printf("Already in container, nothing to do.")
+			return 0, nil
+		}
+		return environ.Exec(args, crate, opts.User, opts.Workdir)
 	}
-	defer c.Close()
 
 	if opts.Clean {
 		if err := c.EnsureRemoved(crate.ContainerName()); err != nil {
@@ -67,7 +78,7 @@ func (opts *Run) client(args []string) (int, error) {
 	}
 
 	if len(args) == 0 {
-		args = append(args, "/bin/bash")
+		args = append(args, crate.Shell)
 	}
 
 	ret, err := c.ExecCmd(container, args, crate, opts.User, opts.Workdir)

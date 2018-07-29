@@ -7,9 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
-	"git.qur.me/qur/wharf_rat/lib/docker"
-	"git.qur.me/qur/wharf_rat/lib/vc"
+	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/docker/label"
+	"wharfr.at/wharfrat/lib/vc"
 )
 
 type List struct {
@@ -126,17 +127,17 @@ func (l *List) Execute(args []string) error {
 	projects := tree{}
 
 	for _, container := range containers {
-		projectFile := container.Labels["me.qur.wharf-rat.project"]
-		crateName := container.Labels["me.qur.wharf-rat.crate"]
-		cfg := container.Labels["me.qur.wharf-rat.config"]
-		branch := container.Labels["me.qur.wharf-rat.branch"]
+		projectFile := container.Labels[label.Project]
+		crateName := container.Labels[label.Crate]
+		cfg := container.Labels[label.Config]
+		branch := container.Labels[label.Branch]
 
 		name := container.Names[0]
 		if strings.HasPrefix(name, "/") {
 			name = name[1:]
 		}
 		project := filepath.Dir(projectFile)
-		crate, err := config.OpenCrate(projectFile, crateName)
+		crate, err := config.OpenCrate(projectFile, crateName, client)
 		if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
 			return fmt.Errorf("Failed to lookup crate: %s", err)
 		}
@@ -160,7 +161,7 @@ func (l *List) Execute(args []string) error {
 		} else if branch != projectBranch {
 			if vc.KnownFile(projectFile, branch) {
 				log.Printf("OpenVcCrate: %s %s %s", projectFile, branch, crateName)
-				crate, err = config.OpenVcCrate(projectFile, branch, crateName)
+				crate, err = config.OpenVcCrate(projectFile, branch, crateName, client)
 				if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
 					return fmt.Errorf("Failed to lookup crate: %s", err)
 				}
@@ -224,11 +225,19 @@ func (l *List) Execute(args []string) error {
 	} else {
 		prefix := projects.Prefix()
 		log.Printf("PROJECT PREFIX: %s", prefix)
-		for i, entry := range entries {
-			short := strings.Replace(entry.project.str, prefix, "...", 1)
-			entries[i].project.str = short
-			if len(short) > maxProject {
-				maxProject = len(short)
+		if len(prefix) > 3 {
+			for i, entry := range entries {
+				short := strings.Replace(entry.project.str, prefix, "...", 1)
+				entries[i].project.str = short
+				if len(short) > maxProject {
+					maxProject = len(short)
+				}
+			}
+		} else {
+			for _, entry := range entries {
+				if len(entry.project.str) > maxProject {
+					maxProject = len(entry.project.str)
+				}
 			}
 		}
 

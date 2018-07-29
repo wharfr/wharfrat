@@ -10,8 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
 	"github.com/docker/docker/api/types"
+	shellwords "github.com/mattn/go-shellwords"
+	"wharfr.at/wharfrat/lib/config"
 )
 
 func (c *Connection) setupUser(id string, crate *config.Crate, usr *user.User, group *user.Group) error {
@@ -21,8 +22,20 @@ func (c *Connection) setupUser(id string, crate *config.Crate, usr *user.User, g
 		"--group", group.Name, "--gid", group.Gid,
 	}
 
+	for _, name := range crate.CopyGroups {
+		group, err := user.LookupGroup(name)
+		if err != nil {
+			return fmt.Errorf("Failed to get group information for '%s': %s", name, err)
+		}
+		cmd = append(cmd, "--create-group", fmt.Sprintf("%s=%s", name, group.Gid))
+	}
+
 	for _, group := range crate.Groups {
 		cmd = append(cmd, "--extra-group", group)
+	}
+
+	if !crate.MountHome {
+		cmd = append(cmd, "--mkhome")
 	}
 
 	buf := &bytes.Buffer{}
@@ -62,12 +75,23 @@ func (c *Connection) setupPrep(id, prep, path string, args ...string) error {
 	return nil
 }
 
-func (c *Connection) runScript(id, label, script string, env map[string]string, args ...string) error {
+func (c *Connection) runScript(id, label, script string, env map[string]string) error {
 	if script == "" {
 		return nil
 	}
 
-	cmd := append([]string{"/bin/bash", "-s"}, args...)
+	cmd := []string{"/bin/sh"}
+	if strings.HasPrefix(strings.TrimSpace(script), "#!") {
+		parts := strings.SplitN(strings.TrimSpace(script), "\n", 2)
+		items, err := shellwords.Parse(parts[0][2:])
+		if err != nil {
+			return err
+		}
+		cmd = items
+	}
+
+	log.Printf("RUN SCRIPT CMD: %#v", cmd)
+
 	stdin := strings.NewReader(script)
 
 	exitCode, err := c.run(id, cmd, env, stdin, os.Stdout, os.Stderr)

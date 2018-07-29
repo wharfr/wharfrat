@@ -3,7 +3,7 @@ package wharfrat
 import (
 	"fmt"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
+	"wharfr.at/wharfrat/lib/config"
 )
 
 type Logout struct {

@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -e
+
+cd "$(dirname "$0")"
+
+c="\e[36m"
+r="\e[0m"
+
+echo -e "${c}build wharfrat ...${r}"
+../build
+
+echo -e "${c}get version ...${r}"
+version="$(../dist/wharfrat version | awk '/^Version/{print $2}')"
+release="${version#*-}"
+release="${release//-/_}"
+version="${version%%-*}"
+if [ "$release" == "$version" ]; then
+    release="0"
+fi
+echo "VERSION: $version, RELEASE: $release"
+
+echo -e "${c}insert version into spec file ...${r}"
+sed -e "s#@@VERSION@@#$version#" -e "s#@@RELEASE@@#$release#" wharfrat.spec > tmp.spec
+
+echo -e "${c}build rpm ...${r}"
+wr -c rpm rpmbuild --define "_topdir /wharfrat/package/rpm-root" -bb tmp.spec
+
+echo -e "${c}cleanup ...${r}"
+rm tmp.spec

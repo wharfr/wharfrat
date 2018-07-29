@@ -6,8 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"git.qur.me/qur/wharf_rat/lib/config"
-	"git.qur.me/qur/wharf_rat/lib/docker"
+	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/docker/label"
 )
 
 type Start struct {
@@ -47,15 +48,15 @@ func (s *Start) Execute(args []string) error {
 	log.Printf("FOUND: %d", len(containers))
 
 	for _, container := range containers {
-		projectFile := container.Labels["me.qur.wharf-rat.project"]
-		crateName := container.Labels["me.qur.wharf-rat.crate"]
+		projectFile := container.Labels[label.Project]
+		crateName := container.Labels[label.Crate]
 
 		name := container.Names[0]
 		if strings.HasPrefix(name, "/") {
 			name = name[1:]
 		}
 
-		crate, err := config.OpenCrate(projectFile, crateName)
+		crate, err := config.OpenCrate(projectFile, crateName, client)
 		if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
 			return fmt.Errorf("Failed to lookup crate: %s", err)
 		}
