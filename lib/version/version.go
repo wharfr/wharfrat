@@ -10,7 +10,7 @@ import (
 	"wharfr.at/wharfrat/lib/docker"
 )
 
-var versionString = "eyJ2ZXJzaW9uIjoidW5rbm93biIsImNvbW1pdCI6InVua25vd24ifQo="
+var versionString = "eyJ2ZXJzaW9uIjoidjAuNy4wIiwiY29tbWl0IjoiNjdlY2JkOTBhZDQ5Y2FkMWZmZjUyODc1ODVjMjU1Yzg3NmY1Y2JjZiIsImJ1aWxkdGltZSI6IjIwMTgtMDctMjlUMjM6NDA6NDhaIn0K"
 
 type versionInfo struct {
 	Version   string
