@@ -60,7 +60,7 @@ echo -e "${c}update version file ...${r}"
 sed -i -e "s#var versionString =.*#var versionString = \"$ver\"#" lib/version/version.go
 
 echo -e "${c}commit new version file ...${r}"
-git commit -s -m "Update version to $version" lib/version/version.go
+git commit -s -m "Update version to ${version}-dev" lib/version/version.go
 
 echo -e "${c}checkout release branch ...${r}"
 git checkout release --
