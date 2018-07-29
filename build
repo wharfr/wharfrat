@@ -22,7 +22,7 @@ if [ -z "$WHARFRAT_NAME" ]; then
         wr="$(pwd)/dist/bootstrap/wr";
     fi
 
-    exec "$wr" "$0" "$@";
+    exec "$wr" "./$(basename "$0")" "$@";
 fi
 
 ver=$(
