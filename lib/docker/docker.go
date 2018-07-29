@@ -376,7 +376,8 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	log.Printf("CMD: %v", cmds)
 
 	inFd, inTerm := term.GetFdInfo(os.Stdin)
-	outFd, _ := term.GetFdInfo(os.Stdout)
+	outFd, outTerm := term.GetFdInfo(os.Stdout)
+	tty := inTerm && outTerm
 
 	env := []string{
 		"WHARF_RAT_CRATE=" + crate.Name(),
@@ -435,16 +436,24 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 
 	log.Printf("User: %s, Workdir: %s", user, workdir)
 
-	if versions.LessThan(c.c.ClientVersion(), "1.35") {
-		log.Printf("WORKDIR WORKAROUND")
-		cmds = append([]string{"/sbin/wr-init", "proxy", workdir}, cmds...)
+	oldAPI := versions.LessThan(c.c.ClientVersion(), "1.35")
+	if oldAPI || tty {
+		proxy := []string{"/sbin/wr-init", "proxy"}
+		if tty {
+			proxy = append(proxy, "--sync")
+		}
+		if oldAPI {
+			proxy = append(proxy, "--workdir", workdir)
+		}
+		log.Printf("USE PROXY (workdir / terminal sync workaround): %s", proxy)
+		cmds = append(proxy, cmds...)
 	}
 
 	config := types.ExecConfig{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
-		Tty:          inTerm,
+		Tty:          tty,
 		Cmd:          cmds,
 		Env:          env,
 		User:         user,
@@ -464,7 +473,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	log.Printf("EXEC: ID=%s", execID)
 
 	startCheck := types.ExecStartCheck{
-		Tty: inTerm,
+		Tty: config.Tty,
 	}
 	attach, err := c.c.ContainerExecAttach(c.ctx, execID, startCheck)
 	if err != nil {
@@ -472,33 +481,9 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	}
 	defer attach.Close()
 
-	if inTerm {
-		inState, err := term.SetRawTerminal(inFd)
-		if err != nil {
-			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
-		}
-		defer term.RestoreTerminal(inFd, inState)
-
-		outState, err := term.SetRawTerminal(outFd)
-		if err != nil {
-			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
-		}
-		defer term.RestoreTerminal(outFd, outState)
-	}
-
 	outChan := make(chan error)
 
-	go func() {
-		io.Copy(attach.Conn, os.Stdin)
-		attach.CloseWrite()
-	}()
-
-	if inTerm {
-		go func() {
-			_, err := io.Copy(os.Stdout, attach.Reader)
-			outChan <- err
-		}()
-
+	if config.Tty {
 		resizeTty := func() error {
 			size, err := term.GetWinsize(inFd)
 			log.Printf("Resize: size=%v err=%s id=%s", size, err, execID)
@@ -513,11 +498,24 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 			return err
 		}
 
-		go func() {
-			log.Printf("Initial Resize")
-			for resizeTty() != nil {
+		log.Printf("WAIT FOR PROXY READY ...")
+		cmd := []byte{}
+		for {
+			buf := make([]byte, 1)
+			n, err := attach.Reader.Read(buf)
+			if err != nil {
+				return -1, err
 			}
-		}()
+			if buf[0] == '\n' {
+				break
+			}
+			cmd = append(cmd, buf[:n]...)
+		}
+		log.Printf("READ: %s\n", cmd)
+
+		log.Printf("Initial Resize")
+		for resizeTty() != nil {
+		}
 
 		go func() {
 			sigchan := make(chan os.Signal, 1)
@@ -526,6 +524,25 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 				resizeTty()
 			}
 		}()
+
+		inState, err := term.SetRawTerminal(inFd)
+		if err != nil {
+			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
+		}
+		defer term.RestoreTerminal(inFd, inState)
+
+		outState, err := term.SetRawTerminal(outFd)
+		if err != nil {
+			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
+		}
+		defer term.RestoreTerminal(outFd, outState)
+
+		attach.Conn.Write([]byte("PROXY RUN\n"))
+
+		go func() {
+			_, err := io.Copy(os.Stdout, attach.Reader)
+			outChan <- err
+		}()
 	} else {
 		go func() {
 			_, err := stdcopy.StdCopy(os.Stdout, os.Stderr, attach.Reader)
@@ -533,6 +550,11 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 			outChan <- err
 		}()
 	}
+
+	go func() {
+		io.Copy(attach.Conn, os.Stdin)
+		attach.CloseWrite()
+	}()
 
 	// Wait for copies to finish
 	if err = <-outChan; err != nil {
