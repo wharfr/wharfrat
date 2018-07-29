@@ -6,7 +6,7 @@ fi
 
 set -e
 
-cd "$(dirname "$0")/cmd/wharfrat"
+cd "$(dirname "$0")"
 
 ver=$(
 cat << EOF | base64 -w 0
@@ -14,6 +14,6 @@ cat << EOF | base64 -w 0
 EOF
 )
 
-CGO_ENABLED=0 go build -a -tags netgo -installsuffix . -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}"
+CGO_ENABLED=0 go build -a -tags netgo -installsuffix . -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" -o dist/wharfrat ./cmd/wharfrat
 
-echo "built cmd/wharfrat/wharfrat"
+echo "built dist/wharfrat"
