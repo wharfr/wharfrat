@@ -352,7 +352,7 @@ func (c *Connection) calcWorkdirSingle(id, user, workdir string, crate *config.C
 		cmd := []string{"/sbin/wr-init", "homedir", user}
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
-		exit, err := c.run(id, cmd, nil, stdout, stderr)
+		exit, err := c.run(id, cmd, nil, nil, stdout, stderr)
 		if err != nil {
 			return "", err
 		}

@@ -37,6 +37,8 @@ default = "main"
     mkdir -p /test
     echo -n "POST: " >> /test/setup.log
     date >> /test/setup.log
+    env >> /test/setup.log
+    echo "----" >> /test/setup.log
     ls -l /test >> /test/setup.log
     echo "POST COMPLETE"
   """

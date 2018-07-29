@@ -14,17 +14,7 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
-func (c *Connection) setupUser(id string, crate *config.Crate) error {
-	usr, err := user.Current()
-	if err != nil {
-		return fmt.Errorf("Failed to get user information: %s", err)
-	}
-
-	group, err := user.LookupGroupId(usr.Gid)
-	if err != nil {
-		return fmt.Errorf("Failed to get group information: %s", err)
-	}
-
+func (c *Connection) setupUser(id string, crate *config.Crate, usr *user.User, group *user.Group) error {
 	cmd := []string{
 		"/sbin/wr-init", "setup", "--debug",
 		"--user", usr.Username, "--uid", usr.Uid, "--name", usr.Name,
@@ -37,7 +27,7 @@ func (c *Connection) setupUser(id string, crate *config.Crate) error {
 
 	buf := &bytes.Buffer{}
 
-	exitCode, err := c.run(id, cmd, nil, nil, buf)
+	exitCode, err := c.run(id, cmd, nil, nil, nil, buf)
 	if err != nil {
 		return err
 	}
@@ -63,7 +53,7 @@ func (c *Connection) setupPrep(id, prep, path string, args ...string) error {
 	cmd.Stdin = strings.NewReader(prep)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Dir = filepath.Dir(path)
+	cmd.Dir = path
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("Setup prep script failed: %s", err)
@@ -72,7 +62,7 @@ func (c *Connection) setupPrep(id, prep, path string, args ...string) error {
 	return nil
 }
 
-func (c *Connection) runScript(id, label, script string, args ...string) error {
+func (c *Connection) runScript(id, label, script string, env map[string]string, args ...string) error {
 	if script == "" {
 		return nil
 	}
@@ -80,7 +70,7 @@ func (c *Connection) runScript(id, label, script string, args ...string) error {
 	cmd := append([]string{"/bin/bash", "-s"}, args...)
 	stdin := strings.NewReader(script)
 
-	exitCode, err := c.run(id, cmd, stdin, os.Stdout, os.Stderr)
+	exitCode, err := c.run(id, cmd, env, stdin, os.Stdout, os.Stderr)
 	if err != nil {
 		return fmt.Errorf("Setup %s script failed: %s", label, err)
 	}
@@ -125,12 +115,12 @@ func (c *Connection) setupTarballs(id, base string, tarballs map[string]string) 
 	return nil
 }
 
-func (c *Connection) doSteps(id, base, prep, pre, post string, tarballs map[string]string, args ...string) error {
+func (c *Connection) doSteps(id, base, prep, pre, post string, tarballs, env map[string]string, args ...string) error {
 	if err := c.setupPrep(id, prep, base, args...); err != nil {
 		return err
 	}
 
-	if err := c.runScript(id, "pre", pre); err != nil {
+	if err := c.runScript(id, "pre", pre, env); err != nil {
 		return err
 	}
 
@@ -138,7 +128,7 @@ func (c *Connection) doSteps(id, base, prep, pre, post string, tarballs map[stri
 		return err
 	}
 
-	if err := c.runScript(id, "post", post); err != nil {
+	if err := c.runScript(id, "post", post, env); err != nil {
 		return err
 	}
 
@@ -148,18 +138,36 @@ func (c *Connection) doSteps(id, base, prep, pre, post string, tarballs map[stri
 func (c *Connection) setup(id string, crate *config.Crate) error {
 	projectPath := filepath.Dir(crate.ProjectPath())
 
-	if err := c.setupUser(id, crate); err != nil {
-		return err
+	usr, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("Failed to get user information: %s", err)
 	}
 
-	if err := c.doSteps(id, projectPath, crate.SetupPrep, crate.SetupPre, crate.SetupPost, crate.Tarballs, projectPath, crate.Name()); err != nil {
+	group, err := user.LookupGroupId(usr.Gid)
+	if err != nil {
+		return fmt.Errorf("Failed to get group information: %s", err)
+	}
+
+	if err := c.setupUser(id, crate, usr, group); err != nil {
 		return err
 	}
 
 	local := config.Local()
-	localPath := local.Path()
+	localPath := filepath.Dir(local.Path())
 
-	if err := c.doSteps(id, localPath, local.SetupPrep, local.SetupPre, local.SetupPost, local.Tarballs, projectPath, crate.Name()); err != nil {
+	env := map[string]string{
+		"WR_EXT_USER":    usr.Username,
+		"WR_EXT_GROUP":   group.Name,
+		"WR_EXT_PROJECT": projectPath,
+		"WR_EXT_CONFIG":  localPath,
+		"WR_CRATE":       crate.Name(),
+	}
+
+	if err := c.doSteps(id, projectPath, crate.SetupPrep, crate.SetupPre, crate.SetupPost, crate.Tarballs, env, projectPath, crate.Name()); err != nil {
+		return err
+	}
+
+	if err := c.doSteps(id, localPath, local.SetupPrep, local.SetupPre, local.SetupPost, local.Tarballs, env, projectPath, crate.Name()); err != nil {
 		return err
 	}
 
