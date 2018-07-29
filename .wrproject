@@ -1,0 +1,17 @@
+default = "main"
+
+[crates.default]
+image = "default"
+
+[crates.main]
+image = "main"
+
+[crates.alpha]
+image = "alpha"
+
+[crates.beta]
+image = "other/beta:0.1"
+
+[crates.ubuntu]
+image = "ubuntu"
+hostname = "test"
