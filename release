@@ -23,10 +23,7 @@ r="\e[0m"
 echo -e "${c}get current branch ...${r}"
 branch="$(git symbolic-ref --short HEAD)"
 
-echo -e "${c}create release branch ...${r}"
-git checkout -b "rel-$version"
-
-echo -e "${c}build version string ...${r}"
+echo -e "${c}build rel version string ...${r}"
 raw_ver=$(
 cat << EOF
 {"version":"$version","commit":"$(git rev-parse HEAD)","buildtime":"$(date --utc +%Y-%m-%dT%H:%M:%SZ)"}
@@ -34,7 +31,7 @@ EOF
 )
 echo "$raw_ver"
 
-echo -e "${c}encode version string ...${r}"
+echo -e "${c}encode rel version string ...${r}"
 ver=$(echo "$raw_ver" | base64 -w 0)
 echo "$ver"
 
@@ -46,6 +43,24 @@ git commit -s -m "Update version to $version" lib/version/version.go
 
 echo -e "${c}tag release ...${r}"
 git tag -a -m "Version $version" "$version"
+
+echo -e "${c}build dev version string ...${r}"
+raw_ver=$(
+cat << EOF
+{"version":"${version}-dev","commit":"$(git rev-parse HEAD)","buildtime":"$(date --utc +%Y-%m-%dT%H:%M:%SZ)"}
+EOF
+)
+echo "$raw_ver"
+
+echo -e "${c}encode dev version string ...${r}"
+ver=$(echo "$raw_ver" | base64 -w 0)
+echo "$ver"
+
+echo -e "${c}update version file ...${r}"
+sed -i -e "s#var versionString =.*#var versionString = \"$ver\"#" lib/version/version.go
+
+echo -e "${c}commit new version file ...${r}"
+git commit -s -m "Update version to $version" lib/version/version.go
 
 echo -e "${c}checkout release branch ...${r}"
 git checkout release --
