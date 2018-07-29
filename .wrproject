@@ -12,3 +12,9 @@ default = "dev"
   mount-home = false
   project-mount = "/wharfrat"
   working-dir = "project, match"
+
+[crates.rpm]
+  image = "wharfr/rpm"
+  mount-home = false
+  project-mount = "/wharfrat"
+  working-dir = "project, match"
