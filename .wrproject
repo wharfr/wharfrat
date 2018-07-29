@@ -20,6 +20,7 @@ default = "main"
   tmpfs = ["/var/tmp:rw,exec"]
   project-mount = "/path/to/project"
   working-dir = "project, match"
+  cap-add = ["SYS_PTRACE"]
   setup-prep = """
     pwd
     exit 0

@@ -138,8 +138,10 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	log.Printf("BINDS: %v", binds)
 
 	hostConfig := &container.HostConfig{
-		Binds: binds,
-		Tmpfs: tmpfs,
+		Binds:   binds,
+		Tmpfs:   tmpfs,
+		CapAdd:  crate.CapAdd,
+		CapDrop: crate.CapDrop,
 	}
 
 	networkingConfig := &network.NetworkingConfig{}
