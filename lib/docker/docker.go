@@ -37,7 +37,12 @@ func Version() string {
 }
 
 func Connect() (*Connection, error) {
-	c, err := client.NewClientWithOpts()
+	host := config.Local().DockerURL
+	opts := []func(*client.Client) error{}
+	if host != "" {
+		opts = append(opts, client.WithHost(host))
+	}
+	c, err := client.NewClientWithOpts(opts...)
 	if err != nil {
 		return nil, err
 	}
