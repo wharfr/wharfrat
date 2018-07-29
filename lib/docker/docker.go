@@ -53,34 +53,16 @@ func (c *Connection) Close() error {
 }
 
 func (c *Connection) List() ([]types.Container, error) {
-	old, err := c.c.ContainerList(c.ctx, types.ContainerListOptions{
-		All:     true,
-		Filters: filters.NewArgs(filters.Arg("label", label.OldProject)),
-	})
-	if err != nil {
-		return nil, err
-	}
-	for _, c := range old {
-		log.Printf("OLD: %s", c.ID)
-		label.FixOld(c.Labels)
-	}
-	new, err := c.c.ContainerList(c.ctx, types.ContainerListOptions{
+	return c.c.ContainerList(c.ctx, types.ContainerListOptions{
 		All:     true,
 		Filters: filters.NewArgs(filters.Arg("label", label.Project)),
 	})
-	if err != nil {
-		return nil, err
-	}
-	return append(old, new...), nil
 }
 
 func (c *Connection) GetContainer(name string) (*types.ContainerJSON, error) {
 	container, err := c.c.ContainerInspect(c.ctx, name)
 	if client.IsErrNotFound(err) {
 		return nil, nil
-	}
-	if container.Config != nil {
-		label.FixOld(container.Config.Labels)
 	}
 	return &container, err
 }
