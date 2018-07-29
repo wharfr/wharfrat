@@ -27,11 +27,16 @@ echo -e "${c}create release branch ...${r}"
 git checkout -b "rel-$version"
 
 echo -e "${c}build version string ...${r}"
-ver=$(
-cat << EOF | base64 -w 0
-{"version":"$(git describe --dirty --match "v[0-9]*")","commit":"$(git rev-parse HEAD)","buildtime":"$(date --utc +%Y-%m-%dT%H:%M:%SZ)"}
+raw_ver=$(
+cat << EOF
+{"version":"$version","commit":"$(git rev-parse HEAD)","buildtime":"$(date --utc +%Y-%m-%dT%H:%M:%SZ)"}
 EOF
 )
+echo "$raw_ver"
+
+echo -e "${c}encode version string ...${r}"
+ver=$(echo "$raw_ver" | base64 -w 0)
+echo "$ver"
 
 echo -e "${c}update version file ...${r}"
 sed -i -e "s#var versionString =.*#var versionString = \"$ver\"#" lib/version/version.go
