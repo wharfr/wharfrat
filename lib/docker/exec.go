@@ -45,7 +45,7 @@ func buildEnv(id string, crate *config.Crate) []string {
 	log.Printf("LOCAL ENV: %v", local.Env)
 	for name, value := range local.Env {
 		switch name {
-		case "WHARFRAT_CRATE", "WHARFRAT_PROJECT":
+		case "WHARFRAT_ID", "WHARFRAT_NAME", "WHARFRAT_CRATE", "WHARFRAT_PROJECT":
 			log.Printf("Ignoring attempt to change %s", name)
 		default:
 			env = append(env, name+"="+value)
