@@ -46,7 +46,7 @@ echo -e "${c}checkout release branch ...${r}"
 git checkout release --
 
 echo -e "${c}merge release tag to branch ...${r}"
-git merge "$version"
+git merge --no-ff --log --no-edit --signoff --no-stat "$version"
 
 echo -e "${c}restore branch ...${r}"
 git checkout "$branch"
