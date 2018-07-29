@@ -15,6 +15,9 @@ version="$(../dist/wharfrat version | awk '/^Version/{print $2}')"
 release="${version#*-}"
 release="${release//-/_}"
 version="${version%%-*}"
+if [ "$release" == "$version" ]; then
+    release="0"
+fi
 echo "VERSION: $version, RELEASE: $release"
 
 echo -e "${c}insert version into spec file ...${r}"
