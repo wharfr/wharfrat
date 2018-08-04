@@ -176,8 +176,11 @@ func (c *Connection) setup(id string, crate *config.Crate) error {
 		return err
 	}
 
-	local := config.Local()
-	localPath := filepath.Dir(local.Path())
+	local, err := config.Local().Setup(crate)
+	if err != nil {
+		return err
+	}
+	localPath := filepath.Dir(config.Local().Path())
 
 	env := map[string]string{
 		"WR_EXT_USER":    usr.Username,

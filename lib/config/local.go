@@ -3,18 +3,27 @@ package config
 import (
 	"log"
 	"os"
+	"regexp"
 	"sync"
 
 	"github.com/burntsushi/toml"
 )
 
-type LocalConfig struct {
-	DockerURL string `toml:"docker-url"`
+type LocalSetup struct {
+	Project   string `toml:"project"`
+	Crate     string `toml:"crate"`
 	SetupPrep string `toml:"setup-prep"`
 	SetupPre  string `toml:"setup-pre"`
 	SetupPost string `toml:"setup-post"`
 	Tarballs  map[string]string
 	Env       map[string]string
+	project   *regexp.Regexp
+	crate     *regexp.Regexp
+}
+
+type LocalConfig struct {
+	DockerURL string       `toml:"docker-url"`
+	Setups    []LocalSetup `toml:"setups"`
 	path      string
 }
 
@@ -46,6 +55,40 @@ func loadLocal() {
 func Local() *LocalConfig {
 	localOnce.Do(loadLocal)
 	return &localConfig
+}
+
+func (l *LocalConfig) Setup(crate *Crate) (*LocalSetup, error) {
+	project := crate.ProjectPath()
+	for i, setup := range l.Setups {
+		if setup.project == nil {
+			if setup.Project == "" {
+				setup.Project = ".*"
+			}
+			r, err := regexp.Compile(setup.Project)
+			if err != nil {
+				return nil, err
+			}
+			setup.project = r
+		}
+		if setup.crate == nil {
+			if setup.Crate == "" {
+				setup.Crate = ".*"
+			}
+			r, err := regexp.Compile(setup.Crate)
+			if err != nil {
+				return nil, err
+			}
+			setup.crate = r
+		}
+		if !setup.project.MatchString(project) {
+			continue
+		}
+		if !setup.crate.MatchString(crate.Name()) {
+			continue
+		}
+		return &l.Setups[i], nil
+	}
+	return &LocalSetup{}, nil
 }
 
 func (l *LocalConfig) Path() string {
