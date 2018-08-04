@@ -39,7 +39,7 @@ func find(start, name string) (string, error) {
 }
 
 func configDir() *configdir.Config {
-	configDirs := configdir.New("", "wharf-rat")
+	configDirs := configdir.New("", "wharfrat")
 
 	folders := configDirs.QueryFolders(configdir.Global)
 	log.Printf("CONFIG FOLDERS: %v", folders)
