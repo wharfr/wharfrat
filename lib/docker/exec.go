@@ -41,18 +41,20 @@ func buildEnv(id string, crate *config.Crate) ([]string, error) {
 		}
 	}
 
-	local, err := config.Local().Setup(crate)
+	locals, err := config.Local().Setup(crate)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("LOCAL ENV: %v", local.Env)
-	for name, value := range local.Env {
-		switch name {
-		case "WHARFRAT_ID", "WHARFRAT_NAME", "WHARFRAT_CRATE", "WHARFRAT_PROJECT":
-			log.Printf("Ignoring attempt to change %s", name)
-		default:
-			env = append(env, name+"="+value)
+	for _, local := range locals {
+		log.Printf("LOCAL ENV: %v", local.Env)
+		for name, value := range local.Env {
+			switch name {
+			case "WHARFRAT_ID", "WHARFRAT_NAME", "WHARFRAT_CRATE", "WHARFRAT_PROJECT":
+				log.Printf("Ignoring attempt to change %s", name)
+			default:
+				env = append(env, name+"="+value)
+			}
 		}
 	}
 

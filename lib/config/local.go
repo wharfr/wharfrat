@@ -57,7 +57,8 @@ func Local() *LocalConfig {
 	return &localConfig
 }
 
-func (l *LocalConfig) Setup(crate *Crate) (*LocalSetup, error) {
+func (l *LocalConfig) Setup(crate *Crate) ([]*LocalSetup, error) {
+	projects := make([]*LocalSetup, 0, len(l.Setups))
 	project := crate.ProjectPath()
 	for i, setup := range l.Setups {
 		if setup.project == nil {
@@ -86,9 +87,9 @@ func (l *LocalConfig) Setup(crate *Crate) (*LocalSetup, error) {
 		if !setup.crate.MatchString(crate.Name()) {
 			continue
 		}
-		return &l.Setups[i], nil
+		projects = append(projects, &l.Setups[i])
 	}
-	return &LocalSetup{}, nil
+	return projects, nil
 }
 
 func (l *LocalConfig) Path() string {

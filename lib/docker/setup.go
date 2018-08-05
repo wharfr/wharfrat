@@ -176,12 +176,12 @@ func (c *Connection) setup(id string, crate *config.Crate) error {
 		return err
 	}
 
-	local, err := config.Local().Setup(crate)
+	locals, err := config.Local().Setup(crate)
 	if err != nil {
 		return err
 	}
-	localPath := filepath.Dir(config.Local().Path())
 
+	localPath := filepath.Dir(config.Local().Path())
 	env := map[string]string{
 		"WR_EXT_USER":    usr.Username,
 		"WR_EXT_GROUP":   group.Name,
@@ -194,8 +194,10 @@ func (c *Connection) setup(id string, crate *config.Crate) error {
 		return err
 	}
 
-	if err := c.doSteps(id, localPath, local.SetupPrep, local.SetupPre, local.SetupPost, local.Tarballs, env, projectPath, crate.Name()); err != nil {
-		return err
+	for _, local := range locals {
+		if err := c.doSteps(id, localPath, local.SetupPrep, local.SetupPre, local.SetupPost, local.Tarballs, env, projectPath, crate.Name()); err != nil {
+			return err
+		}
 	}
 
 	return nil
