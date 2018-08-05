@@ -7,6 +7,65 @@ Configuration
 Project Configuration
 =====================
 
+Crate Configuration
+===================
+
+The table below lists the settings available for each crate, their types and
+default values (if the default is not empty):
+
++---------------+------------------+-------------------------------------------+
+| cap-add       | array of strings | capabilities to enable for the container  |
++---------------+------------------+-------------------------------------------+
+| cap-drop      | array of strings | capabilities to disable for the container |
++---------------+------------------+-------------------------------------------+
+| copy-groups   | array of strings | groups to copy from the host to the       |
+|               |                  | container                                 |
++---------------+------------------+-------------------------------------------+
+| env           | table of strings | mapping from environment variable name to |
+|               |                  | value                                     |
++---------------+------------------+-------------------------------------------+
+| env-blacklist | array of strings | host environment variables to drop        |
++---------------+------------------+-------------------------------------------+
+| env-whitelist | array of strings | host environment variables to keep        |
++---------------+------------------+-------------------------------------------+
+| groups        | array of strings | groups the user should be in              |
++---------------+------------------+-------------------------------------------+
+| hostname      | string           | hostname for container (default: "dev")   |
++---------------+------------------+-------------------------------------------+
+| image         | string           | name of image to create container from    |
++---------------+------------------+-------------------------------------------+
+| mount-home    | bool             | should /home be mounted into container    |
+|               |                  | (default: true)                           |
++---------------+------------------+-------------------------------------------+
+| ports         | array of strings | ports to be exposed from container (-p    |
+|               |                  | option to docker)                         |
++---------------+------------------+-------------------------------------------+
+| project-mount | string           | path to mount project in container        |
++---------------+------------------+-------------------------------------------+
+| setup-post    | string           | script to run in container after          |
+|               |                  | unpacking tarballs                        |
++---------------+------------------+-------------------------------------------+
+| setup-pre     | string           | script to run in container before running |
+|               |                  | tarballs                                  |
++---------------+------------------+-------------------------------------------+
+| setup-prep    | string           | script to run locally before the other    |
+|               |                  | setup                                     |
++---------------+------------------+-------------------------------------------+
+| shell         | string           | shell to use in the container             |
++---------------+------------------+-------------------------------------------+
+| tarballs      | table of strings | mapping from tarball location to install  |
+|               |                  | location                                  |
++---------------+------------------+-------------------------------------------+
+| tmpfs         | array of strings | paths in the container where tmpfs should |
+|               |                  | be mounted                                |
++---------------+------------------+-------------------------------------------+
+| volumes       | array of strings | list of volume mounts (-v option to       |
+|               |                  | docker)                                   |
++---------------+------------------+-------------------------------------------+
+| working-dir   | string           | method to use to set working dir          |
+|               |                  | (default: "match")                        |
++---------------+------------------+-------------------------------------------+
+
 Local Configuration
 ===================
 
