@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -216,6 +217,14 @@ func (c *Crate) ContainerName() string {
 	_, err = h.Write([]byte(c.branch))
 	if err != nil {
 		panic("Failed to write crate branch: " + err.Error())
+	}
+	usr, err := user.Current()
+	if err != nil {
+		panic("Failed to get user information: " + err.Error())
+	}
+	_, err = h.Write([]byte(usr.Username))
+	if err != nil {
+		panic("Failed to write username: " + err.Error())
 	}
 	hash := hex.EncodeToString(h.Sum(nil))
 	return "wr_" + hash
