@@ -66,6 +66,39 @@ default values (if the default is not empty):
 |               |                  | (default: "match")                        |
 +---------------+------------------+-------------------------------------------+
 
+.. bibliographic fields:
+
+:cap-add: Add additional Linux capabilities to the container. The list of
+          possible values can be found in the docker run reference
+          (https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
+
+          For example to add the ability to use ptrace inside the container:
+
+          .. code-block:: toml
+
+            cap-add = ["SYS_PTRACE"]
+
+:cap-drop: Drop normally enabled Linux capabilities from the container. The list
+           of possible values can be found in the docker run reference
+           (https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
+
+           For example to drop the ability to bind to privileged ports:
+
+           .. code-block:: toml
+
+             cap-drop = ["NET_BIND_SERVICE."]
+
+:copy-groups: TODO ...
+
+:env: Specify environment variables to be set in the container. This consists of
+      a table, where the keys are the variable names and the values are the
+      variable values. For example to set SOME_VARIABLE to "some value":
+
+      .. code-block:: toml
+
+        [crates.demo.env]
+            "SOME_VARIABLE" = "some value"
+
 Local Configuration
 ===================
 
