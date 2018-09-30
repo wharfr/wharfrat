@@ -8,6 +8,7 @@ const (
 	Crate   = domain + ".crate"
 	Config  = domain + ".config"
 	Branch  = domain + ".branch"
+	User    = domain + ".user"
 )
 
 // Labels intended for use on images

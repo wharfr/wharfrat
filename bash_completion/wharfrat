@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+_wr() {
+    COMPREPLY=( $(wr /sbin/wr-init complete -c "$COMP_CWORD" "${COMP_WORDS[@]}") )
+}
+
+complete -F _wr wr

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -53,15 +54,37 @@ func (c *Connection) Close() error {
 }
 
 func (c *Connection) List() ([]types.Container, error) {
-	return c.c.ContainerList(c.ctx, types.ContainerListOptions{
+	all, err := c.c.ContainerList(c.ctx, types.ContainerListOptions{
 		All:     true,
 		Filters: filters.NewArgs(filters.Arg("label", label.Project)),
 	})
+	if err != nil {
+		return nil, err
+	}
+	usr, err := user.Current()
+	if err != nil {
+		return nil, err
+	}
+	filtered := make([]types.Container, 0, len(all))
+	for _, container := range all {
+		cUser := container.Labels[label.User]
+		if cUser == usr.Username {
+			filtered = append(filtered, container)
+		}
+	}
+	return all, nil
 }
 
 func (c *Connection) GetContainer(name string) (*types.ContainerJSON, error) {
 	container, err := c.c.ContainerInspect(c.ctx, name)
 	if client.IsErrNotFound(err) {
+		return nil, nil
+	}
+	usr, err := user.Current()
+	if err != nil {
+		return nil, err
+	}
+	if container.Config != nil && container.Config.Labels[label.User] != usr.Username {
 		return nil, nil
 	}
 	return &container, err

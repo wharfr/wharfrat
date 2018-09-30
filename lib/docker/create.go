@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 	"time"
@@ -106,10 +107,16 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		return "", fmt.Errorf("Failed to get self: %s", err)
 	}
 
+	usr, err := user.Current()
+	if err != nil {
+		return "", fmt.Errorf("Failed to get user information: %s", err)
+	}
+
 	labels := map[string]string{
 		label.Project: crate.ProjectPath(),
 		label.Crate:   crate.Name(),
 		label.Config:  crate.Json(),
+		label.User:    usr.Username,
 	}
 
 	projectDir := filepath.Dir(crate.ProjectPath())

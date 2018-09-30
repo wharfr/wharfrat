@@ -23,7 +23,7 @@ import (
 // blacklist is applies to the host environment to prevent the container
 // environment from picking up settings that don't make sense (e.g. taking PATH
 // into the container).
-func buildEnv(id string, crate *config.Crate) []string {
+func buildEnv(id string, crate *config.Crate) ([]string, error) {
 	env := []string{
 		"WHARFRAT_ID=" + id,
 		"WHARFRAT_NAME=" + crate.ContainerName(),
@@ -41,14 +41,20 @@ func buildEnv(id string, crate *config.Crate) []string {
 		}
 	}
 
-	local := config.Local()
-	log.Printf("LOCAL ENV: %v", local.Env)
-	for name, value := range local.Env {
-		switch name {
-		case "WHARFRAT_ID", "WHARFRAT_NAME", "WHARFRAT_CRATE", "WHARFRAT_PROJECT":
-			log.Printf("Ignoring attempt to change %s", name)
-		default:
-			env = append(env, name+"="+value)
+	locals, err := config.Local().Setup(crate)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, local := range locals {
+		log.Printf("LOCAL ENV: %v", local.Env)
+		for name, value := range local.Env {
+			switch name {
+			case "WHARFRAT_ID", "WHARFRAT_NAME", "WHARFRAT_CRATE", "WHARFRAT_PROJECT":
+				log.Printf("Ignoring attempt to change %s", name)
+			default:
+				env = append(env, name+"="+value)
+			}
 		}
 	}
 
@@ -80,7 +86,7 @@ func buildEnv(id string, crate *config.Crate) []string {
 		}
 	}
 
-	return env
+	return env, nil
 }
 
 func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user, workdir string) (int, error) {
@@ -127,13 +133,18 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		cmds = append(proxy, cmds...)
 	}
 
+	env, err := buildEnv(id, crate)
+	if err != nil {
+		return 0, err
+	}
+
 	config := types.ExecConfig{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
 		Tty:          tty,
 		Cmd:          cmds,
-		Env:          buildEnv(id, crate),
+		Env:          env,
 		User:         user,
 		WorkingDir:   workdir,
 	}

@@ -24,7 +24,7 @@ echo -e "${c}insert version into spec file ...${r}"
 sed -e "s#@@VERSION@@#$version#" -e "s#@@RELEASE@@#$release#" wharfrat.spec > tmp.spec
 
 echo -e "${c}build rpm ...${r}"
-wr -c rpm rpmbuild --define "_topdir /wharfrat/package/rpm-root" -bb tmp.spec
+../dist/wr -c rpm rpmbuild --define "_topdir /wharfrat/package/rpm-root" -bb tmp.spec
 
 echo -e "${c}cleanup ...${r}"
 rm tmp.spec
