@@ -20,12 +20,17 @@ mkdir -p $RPM_BUILD_ROOT/%{_bindir}
 install /wharfrat/dist/wharfrat $RPM_BUILD_ROOT/%{_bindir}
 ln -s wharfrat $RPM_BUILD_ROOT/%{_bindir}/wr
 ln -s wharfrat $RPM_BUILD_ROOT/%{_bindir}/wr-exec
+mkdir -p $RPM_BUILD_ROOT/usr/share/bash_completion/completions
+cp /wharfrat/bash_completion/wharfrat $RPM_BUILD_ROOT/usr/share/bash_completion/completions/wharfrat
+ln -s wharfrat $RPM_BUILD_ROOT/usr/share/bash_completion/completions/wr
 
 
 %files
 %license /usr/share/licenses/wharfrat/LICENSE
 #%doc add-docs-here
 %{_bindir}/*
+/usr/share/bash_completion/completions/wharfrat
+/usr/share/bash_completion/completions/wr
 
 
 
