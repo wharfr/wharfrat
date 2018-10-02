@@ -18,7 +18,8 @@ if [ -z "$WHARFRAT_NAME" ]; then
         # We need to bootstrap the build by using docker directly
         echo "bootstrap ...";
         mkdir -p dist/bootstrap
-        docker run -it --rm -v $(pwd):/go/src/wharfr.at/wharfrat wharfr/dev go build -o /go/src/wharfr.at/wharfrat/dist/bootstrap/wr wharfr.at/wharfrat/cmd/wr
+        image="$(egrep -o 'wharfr/dev(:[^"])?' .wrproject)"
+        docker run -it --rm -v $(pwd):/go/src/wharfr.at/wharfrat "${image}" go build -o /go/src/wharfr.at/wharfrat/dist/bootstrap/wr wharfr.at/wharfrat/cmd/wr
         wr="$(pwd)/dist/bootstrap/wr";
     fi
 
