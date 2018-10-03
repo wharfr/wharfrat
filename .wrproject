@@ -1,7 +1,7 @@
 default = "dev"
 
 [crates.dev]
-  image = "wharfr/dev:1.10.0"
+  image = "wharfr/dev:1.11.0"
   mount-home = false
   project-mount = "/go/src/wharfr.at/wharfrat"
   working-dir = "project, match"
