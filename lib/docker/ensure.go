@@ -6,8 +6,6 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker/label"
-
-	"github.com/docker/docker/api/types"
 )
 
 func (c *Connection) EnsureRunning(crate *config.Crate, force bool) (string, error) {
@@ -121,7 +119,5 @@ func (c *Connection) EnsureRemoved(name string) error {
 
 	log.Printf("FOUND %s %s", container.ID, container.State)
 
-	return c.c.ContainerRemove(c.ctx, name, types.ContainerRemoveOptions{
-		Force: true,
-	})
+	return c.Remove(name, true)
 }

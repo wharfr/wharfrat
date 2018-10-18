@@ -50,7 +50,7 @@ func (s *Remove) Execute(args []string) error {
 		}
 
 		if s.All || names[name] {
-			if err := client.EnsureRemoved(name); err != nil {
+			if err := client.Remove(name, true); err != nil {
 				fmt.Printf("Failed to remove %s: %s\n", name, err)
 			} else {
 				fmt.Printf("%s removed\n", name)

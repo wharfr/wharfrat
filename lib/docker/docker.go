@@ -102,6 +102,12 @@ func (c *Connection) Stop(id string) error {
 	return c.c.ContainerStop(c.ctx, id, nil)
 }
 
+func (c *Connection) Remove(id string, force bool) error {
+	return c.c.ContainerRemove(c.ctx, id, types.ContainerRemoveOptions{
+		Force: force,
+	})
+}
+
 func (c *Connection) calcWorkdir(id, user, workdir string, crate *config.Crate) (string, error) {
 	if strings.HasPrefix(workdir, "/") {
 		return workdir, nil
