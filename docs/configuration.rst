@@ -106,6 +106,11 @@ In addition to the shared project configuration each user can have a local
 configuration. This configuration allows changing the Docker URL, and adding
 extra steps to the container setup.
 
+On Linux this file can be found at "``$XDG_CONFIG_HOME/wharfrat/config.toml``".
+If ``$XDG_CONFIG_HOME`` is not set, then the default path is
+"``$HOME/.config``", so the default location for the config is
+"``$HOME/.config/wharfrat/config.toml``".
+
 .. code-block:: toml
 
   docker-url = "file:///var/run/docker.sock"
