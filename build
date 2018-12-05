@@ -23,7 +23,7 @@ if [ -z "$WHARFRAT_NAME" ]; then
         wr="$(pwd)/dist/bootstrap/wr";
     fi
 
-    exec "$wr" --clean "./$(basename "$0")" "$@";
+    exec "$wr" --auto-clean "./$(basename "$0")" "$@";
 fi
 
 ver=$(

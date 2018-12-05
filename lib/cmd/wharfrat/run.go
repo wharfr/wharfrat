@@ -11,12 +11,13 @@ import (
 )
 
 type Run struct {
-	Stop    bool   `short:"s" long:"stop" description:"Stop contiainer instead of running command"`
-	Crate   string `short:"c" long:"crate" value-name:"NAME" description:"Name of crate to run"`
-	Clean   bool   `long:"clean" description:"Rebuild container from Image"`
-	User    string `short:"u" long:"user" value-name:"USER[:GROUP]" description:"Override user/group for running command"`
-	Workdir string `short:"w" long:"workdir" value-name:"DIR" description:"Override working directory for running command"`
-	Force   bool   `long:"force" description:"Ignore out of date crate configuration"`
+	Stop      bool   `short:"s" long:"stop" description:"Stop contiainer instead of running command"`
+	Crate     string `short:"c" long:"crate" value-name:"NAME" description:"Name of crate to run"`
+	Clean     bool   `long:"clean" description:"Rebuild container from Image"`
+	AutoClean bool   `long:"auto-clean" description:"Automatically apply --clean, if the container is old"`
+	User      string `short:"u" long:"user" value-name:"USER[:GROUP]" description:"Override user/group for running command"`
+	Workdir   string `short:"w" long:"workdir" value-name:"DIR" description:"Override working directory for running command"`
+	Force     bool   `long:"force" description:"Ignore out of date crate configuration"`
 }
 
 func (opts *Run) stop(args []string) error {
@@ -72,7 +73,7 @@ func (opts *Run) client(args []string) (int, error) {
 		}
 	}
 
-	container, err := c.EnsureRunning(crate, opts.Force)
+	container, err := c.EnsureRunning(crate, opts.Force, opts.AutoClean)
 	if err != nil {
 		return 1, fmt.Errorf("Failed to run container: %s", err)
 	}
