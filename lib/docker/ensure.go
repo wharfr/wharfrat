@@ -29,6 +29,7 @@ func (c *Connection) EnsureRunning(crate *config.Crate, force, removeOld bool) (
 			if err := c.Remove(crate.ContainerName(), true); err != nil {
 				return "", err
 			}
+			return c.Create(crate)
 		} else {
 			return "", fmt.Errorf("Container built from old config")
 		}
@@ -48,6 +49,7 @@ func (c *Connection) EnsureRunning(crate *config.Crate, force, removeOld bool) (
 			if err := c.Remove(crate.ContainerName(), true); err != nil {
 				return "", err
 			}
+			return c.Create(crate)
 		} else {
 			return "", fmt.Errorf("Container built from wrong (old?) image")
 		}
