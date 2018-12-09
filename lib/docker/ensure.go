@@ -6,11 +6,9 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker/label"
-
-	"github.com/docker/docker/api/types"
 )
 
-func (c *Connection) EnsureRunning(crate *config.Crate, force bool) (string, error) {
+func (c *Connection) EnsureRunning(crate *config.Crate, force, removeOld bool) (string, error) {
 	container, err := c.GetContainer(crate.ContainerName())
 	if err != nil {
 		return "", fmt.Errorf("Failed to get docker container: %s", err)
@@ -23,8 +21,18 @@ func (c *Connection) EnsureRunning(crate *config.Crate, force bool) (string, err
 	log.Printf("FOUND %s %s", container.ID, container.State)
 
 	oldJson := container.Config.Labels[label.Config]
-	if oldJson != crate.Json() && !force {
-		return "", fmt.Errorf("Container built from old config")
+	if oldJson != crate.Json() {
+		if force {
+			log.Printf("Forcing use of container built from old config")
+		} else if removeOld {
+			log.Printf("Automatically removing container built from old config")
+			if err := c.Remove(crate.ContainerName(), true); err != nil {
+				return "", err
+			}
+			return c.Create(crate)
+		} else {
+			return "", fmt.Errorf("Container built from old config")
+		}
 	}
 
 	image, err := c.GetImage(crate.Image)
@@ -32,9 +40,19 @@ func (c *Connection) EnsureRunning(crate *config.Crate, force bool) (string, err
 		return "", err
 	}
 
-	if container.Image != image.ID && !force {
+	if container.Image != image.ID {
 		log.Printf("CONTAINER IMAGE: wanted \"%s\", got \"%s\"", image.ID, container.Image)
-		return "", fmt.Errorf("Container built from wrong (old?) image")
+		if force {
+			log.Printf("Forcing use of container built from old image")
+		} else if removeOld {
+			log.Printf("Automatically removing container built from old image")
+			if err := c.Remove(crate.ContainerName(), true); err != nil {
+				return "", err
+			}
+			return c.Create(crate)
+		} else {
+			return "", fmt.Errorf("Container built from wrong (old?) image")
+		}
 	}
 
 	switch container.State.Status {
@@ -121,7 +139,5 @@ func (c *Connection) EnsureRemoved(name string) error {
 
 	log.Printf("FOUND %s %s", container.ID, container.State)
 
-	return c.c.ContainerRemove(c.ctx, name, types.ContainerRemoveOptions{
-		Force: true,
-	})
+	return c.Remove(name, true)
 }

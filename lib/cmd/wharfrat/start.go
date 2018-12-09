@@ -66,7 +66,7 @@ func (s *Start) Execute(args []string) error {
 				fmt.Printf("Failed to start %s: crate config mising\n", name)
 				continue
 			}
-			if _, err := client.EnsureRunning(crate, s.Force); err != nil {
+			if _, err := client.EnsureRunning(crate, s.Force, false); err != nil {
 				fmt.Printf("Failed to start %s: %s\n", name, err)
 			} else {
 				fmt.Printf("%s started\n", name)

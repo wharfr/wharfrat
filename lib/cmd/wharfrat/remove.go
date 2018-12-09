@@ -49,12 +49,14 @@ func (s *Remove) Execute(args []string) error {
 			name = name[1:]
 		}
 
-		if s.All || names[name] {
-			if err := client.EnsureRemoved(name); err != nil {
-				fmt.Printf("Failed to remove %s: %s\n", name, err)
-			} else {
-				fmt.Printf("%s removed\n", name)
-			}
+		if !s.All && !names[name] {
+			continue
+		}
+
+		if err := client.Remove(name, true); err != nil {
+			fmt.Printf("Failed to remove %s: %s\n", name, err)
+		} else {
+			fmt.Printf("%s removed\n", name)
 		}
 	}
 

@@ -61,7 +61,7 @@ func (e *ExecCfg) Execute(args []string) (int, error) {
 		return 0, err
 	}
 	log.Printf("CRATE: %#v", crate)
-	container, err := client.EnsureRunning(crate, false)
+	container, err := client.EnsureRunning(crate, false, false)
 	if err != nil {
 		return 1, fmt.Errorf("Failed to run container: %s", err)
 	}

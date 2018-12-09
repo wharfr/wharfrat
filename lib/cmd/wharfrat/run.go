@@ -11,12 +11,14 @@ import (
 )
 
 type Run struct {
-	Stop    bool   `short:"s" long:"stop" description:"Stop contiainer instead of running command"`
-	Crate   string `short:"c" long:"crate" value-name:"NAME" description:"Name of crate to run"`
-	Clean   bool   `long:"clean" description:"Rebuild container from Image"`
-	User    string `short:"u" long:"user" value-name:"USER[:GROUP]" description:"Override user/group for running command"`
-	Workdir string `short:"w" long:"workdir" value-name:"DIR" description:"Override working directory for running command"`
-	Force   bool   `long:"force" description:"Ignore out of date crate configuration"`
+	Stop        bool   `short:"s" long:"stop" description:"Stop contiainer instead of running command"`
+	Crate       string `short:"c" long:"crate" value-name:"NAME" description:"Name of crate to run"`
+	Clean       bool   `long:"clean" description:"Rebuild container from Image"`
+	AutoClean   bool   `long:"auto-clean" description:"Automatically apply --clean, if the container is old"`
+	NoAutoClean bool   `long:"no-auto-clean" description:"Disable auto-clean, if enabled in local config"`
+	User        string `short:"u" long:"user" value-name:"USER[:GROUP]" description:"Override user/group for running command"`
+	Workdir     string `short:"w" long:"workdir" value-name:"DIR" description:"Override working directory for running command"`
+	Force       bool   `long:"force" description:"Ignore out of date crate configuration"`
 }
 
 func (opts *Run) stop(args []string) error {
@@ -42,6 +44,10 @@ func (opts *Run) stop(args []string) error {
 }
 
 func (opts *Run) client(args []string) (int, error) {
+	if opts.AutoClean && opts.NoAutoClean {
+		return 1, fmt.Errorf("--auto-clean and --no-auto-clean are not compatible")
+	}
+
 	c, err := docker.Connect()
 	if err != nil {
 		return 1, fmt.Errorf("Failed to create docker client: %s", err)
@@ -72,7 +78,15 @@ func (opts *Run) client(args []string) (int, error) {
 		}
 	}
 
-	container, err := c.EnsureRunning(crate, opts.Force)
+	autoClean := config.Local().AutoClean
+	switch {
+	case opts.AutoClean:
+		autoClean = true
+	case opts.NoAutoClean:
+		autoClean = false
+	}
+
+	container, err := c.EnsureRunning(crate, opts.Force, autoClean)
 	if err != nil {
 		return 1, fmt.Errorf("Failed to run container: %s", err)
 	}

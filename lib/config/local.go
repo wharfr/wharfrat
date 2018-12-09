@@ -23,6 +23,7 @@ type LocalSetup struct {
 
 type LocalConfig struct {
 	DockerURL string       `toml:"docker-url"`
+	AutoClean bool         `toml:"auto-clean"`
 	Setups    []LocalSetup `toml:"setups"`
 	path      string
 }
