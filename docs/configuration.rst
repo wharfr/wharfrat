@@ -114,6 +114,7 @@ If ``$XDG_CONFIG_HOME`` is not set, then the default path is
 .. code-block:: toml
 
   docker-url = "file:///var/run/docker.sock"
+  auto-clean = true
 
   [[setups]]
       project = ".*/test"
@@ -159,6 +160,9 @@ The available settings are:
 
 +------------+-----------------------------------------------------------------+
 | docker-url | The URL to use to connect to Docker                             |
++------------+-----------------------------------------------------------------+
+| auto-clean | If set to true, then wharfrat run will automatically replace    |
+|            | containers that were built from old config, or the wrong image. |
 +------------+------------+----------------------------------------------------+
 | setups     | project    | a regular expression that much match the project   |
 |            |            | path for this setup to be applies. If not          |
