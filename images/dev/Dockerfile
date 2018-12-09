@@ -1,4 +1,6 @@
-FROM golang:1.11
+FROM golang:1.11.2-alpine
+
+RUN apk add --no-cache git
 
 # We have to unvendor go-connections, as it is used by the docker client API -
 # so we need the docker client to agree with us about which library we are
