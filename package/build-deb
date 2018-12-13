@@ -51,10 +51,10 @@ echo "Collate files ..."
 cp "${base}/dist/${name}" "${scratch}/usr/bin/"
 ln -s "wharfrat" "${scratch}/usr/bin/wr"
 
-cp "${base}/LICENSE" "${scratch}/usr/share/doc/${package}/copyright"
-#cp "${base}/README.md" "${scratch}/usr/share/doc/${package}/"
+cp "${base}/LICENSE" "${scratch}/usr/share/doc/${name}/copyright"
+#cp "${base}/README.md" "${scratch}/usr/share/doc/${name}/"
 
-cp "${dir}/lintian" "${scratch}/usr/share/lintian/overrides/${package}"
+cp "${dir}/lintian" "${scratch}/usr/share/lintian/overrides/${name}"
 
 echo "Fix permissions ..."
 find "${scratch}" -type f -exec chmod 644 {} \;
