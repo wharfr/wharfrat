@@ -1,2 +1,4 @@
 /rpm-root/
 /tmp.spec
+/*.deb
+/deb-scratch/
