@@ -1,0 +1,9 @@
+Package: @@package@@
+Section: universe/x11
+Priority: extra
+Maintainer: Julian Phillips <julian@quantumfyre.co.uk>
+Version: @@version@@
+Architecture: amd64
+Description: container based development environments
+ wharfrat uses docker to manage developement environemnts using version
+ controlled configuration files.

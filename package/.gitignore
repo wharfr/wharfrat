@@ -1,2 +1,5 @@
 /rpm-root/
 /tmp.spec
+/rpms
+/debs/
+/deb-scratch/

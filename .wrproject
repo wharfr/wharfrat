@@ -19,3 +19,10 @@ default = "dev"
   mount-home = false
   project-mount = "/wharfrat"
   working-dir = "project, match"
+
+[crates.deb]
+  image = "wharfr/deb:1.0"
+  mount-home = false
+  project-mount = "/wharfrat"
+  working-dir = "project, match"
+  cap-add = ["SYS_PTRACE"]
