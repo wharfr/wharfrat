@@ -18,6 +18,7 @@ dir="$(cd "${dir}"; pwd)"
 base="$(dirname "${dir}")"
 version="$1"
 release="$2"
+release="${release//_/+}"
 name="wharfrat"
 
 sed_script="s|@@version@@|${version}-${release}|g;s|@@name@@|${name}|g;s|@@package@@|${name}|g"
@@ -63,7 +64,5 @@ find "${scratch}/DEBIAN" -name "pre*" -exec chmod 755 {} \;
 find "${scratch}/DEBIAN" -name "post*" -exec chmod 755 {} \;
 
 echo "Run dpkg-deb ..."
-fakeroot dpkg-deb --build "${scratch}" "${dir}"
-
-echo "Remove build tree ..."
-rm -r "${scratch}"
+mkdir -p "${dir}/debs"
+fakeroot dpkg-deb --build "${scratch}" "${dir}/debs"

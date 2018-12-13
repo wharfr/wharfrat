@@ -26,9 +26,12 @@ sed -e "s#@@VERSION@@#$version#" -e "s#@@RELEASE@@#$release#" wharfrat.spec > tm
 
 echo -e "${c}build rpm ...${r}"
 ../dist/wr -c rpm rpmbuild --define "_topdir /wharfrat/package/rpm-root" -bb tmp.spec
+if ! [ -L "rpms" ]; then
+    ln -sf rpm-root/RPMS/x86_64 rpms
+fi
 
 echo -e "${c}build deb ...${r}"
-../dist/wr -c deb ./build-deb "$version" "$release"
+../dist/wr -c deb bash ./build-deb "$version" "$release"
 
 echo -e "${c}cleanup ...${r}"
 rm tmp.spec
