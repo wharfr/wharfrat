@@ -59,17 +59,34 @@ func buildEnv(id string, crate *config.Crate) ([]string, error) {
 	}
 
 	blacklist := map[string]bool{
+		// Blacklist basic environment setup that shouldn't be inherited
 		"HOSTNAME": true,
 		"PATH":     true,
 		"SHELL":    true,
 		"HOST":     true,
 		"USER":     true,
 		"HOME":     true,
-		"PS0":      true,
-		"PS1":      true,
-		"PS2":      true,
-		"PS3":      true,
-		"PS4":      true,
+
+		// Blacklist prompt variables
+		"PS0": true,
+		"PS1": true,
+		"PS2": true,
+		"PS3": true,
+		"PS4": true,
+
+		// Blacklist VTE variables
+		"VTE_VERSION": true,
+
+		// Blacklist Konsole DBUS variables
+		"KONSOLE_DBUS_SESION":  true,
+		"KONSOLE_DBUS_WINDOW":  true,
+		"KONSOLE_DBUS_SERVICE": true,
+
+		// Blacklist desktop session variables
+		"DBUS_SESSION_BUS_ADDRESS": true,
+		"XDG_SESSION_PATH":         true,
+		"KDE_FULL_SESSION":         true,
+		"SESSION_MANAGER":          true,
 	}
 
 	for _, name := range crate.EnvWhitelist {
