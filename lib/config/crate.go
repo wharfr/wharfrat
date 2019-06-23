@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -32,6 +33,7 @@ type Crate struct {
 	Groups       []string          `toml:"groups"`
 	Hostname     string            `toml:"hostname"`
 	Image        string            `toml:"image"`
+	ImageCmd     string            `toml:"image-cmd"`
 	MountHome    bool              `toml:"mount-home"`
 	Network      string            `toml:"network"`
 	Ports        []string          `toml:"ports"`
@@ -100,10 +102,36 @@ func GetCrate(start, name string, ls LabelSource) (*Crate, error) {
 	return openCrate(project, crateName, branch, ls)
 }
 
+func runImageCmd(command string, projectDir string) (string, error) {
+	shell := []string{"sh"}
+	if strings.HasPrefix(command, "#!") {
+		hashBang := strings.Split(command, "\n")[0]
+		shell = strings.Split(strings.TrimSpace(hashBang[2:]), " ")
+	}
+	buf := &bytes.Buffer{}
+	cmd := exec.Command(shell[0], shell[1:]...)
+	cmd.Stdin = strings.NewReader(command)
+	cmd.Stdout = buf
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
 func openCrate(project *Project, crateName, branch string, ls LabelSource) (*Crate, error) {
 	crate, ok := project.Crates[crateName]
 	if !ok {
 		return nil, CrateNotFound
+	}
+
+	if crate.ImageCmd != "" {
+		image, err := runImageCmd(crate.ImageCmd, filepath.Dir(project.path))
+		if err != nil {
+			return nil, err
+		}
+		if image != "" {
+			crate.Image = image
+		}
 	}
 
 	if crate.Image == "" {
