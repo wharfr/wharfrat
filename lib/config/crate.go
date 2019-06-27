@@ -112,10 +112,11 @@ func runImageCmd(command string, projectDir string) (string, error) {
 	cmd := exec.Command(shell[0], shell[1:]...)
 	cmd.Stdin = strings.NewReader(command)
 	cmd.Stdout = buf
+	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		return "", err
 	}
-	return buf.String(), nil
+	return strings.TrimSpace(buf.String()), nil
 }
 
 func openCrate(project *Project, crateName, branch string, ls LabelSource) (*Crate, error) {
@@ -127,7 +128,7 @@ func openCrate(project *Project, crateName, branch string, ls LabelSource) (*Cra
 	if crate.ImageCmd != "" {
 		image, err := runImageCmd(crate.ImageCmd, filepath.Dir(project.path))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("image-cmd failed: %s", err)
 		}
 		if image != "" {
 			crate.Image = image
