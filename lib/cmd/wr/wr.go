@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"wharfr.at/wharfrat/lib/cmd/wharfrat"
+	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/version"
 
 	flags "github.com/jessevdk/go-flags"
@@ -39,6 +40,7 @@ func Main() int {
 		return 1
 	}
 
+	config.Debug = opts.Debug
 	if !opts.Debug {
 		log.SetOutput(ioutil.Discard)
 	}

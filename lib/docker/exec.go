@@ -138,6 +138,9 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	oldAPI := versions.LessThan(c.c.ClientVersion(), "1.35")
 	if oldAPI || tty || len(crate.Groups) > 0 {
 		proxy := []string{"/sbin/wr-init", "proxy"}
+		if config.Debug {
+			proxy = append(proxy, "-d")
+		}
 		if tty {
 			proxy = append(proxy, "--sync")
 		}
