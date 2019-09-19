@@ -6,8 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/docker/docker/pkg/term"
@@ -21,9 +23,11 @@ type args struct {
 }
 
 type Proxy struct {
-	Sync    bool     `long:"sync"`
-	Workdir string   `long:"workdir"`
-	Groups  []string `long:"group"`
+	Sync        bool     `long:"sync"`
+	Workdir     string   `long:"workdir"`
+	Groups      []string `long:"group"`
+	PathAppend  []string `long:"append-path"`
+	PathPrepend []string `long:"prepend-path"`
 	//	Args    args `positional-args:"true" required:"true"`
 }
 
@@ -61,6 +65,15 @@ func (p *Proxy) Wait() error {
 
 	// 4. all done, restore terminal and continue
 	return nil
+}
+
+func (p *Proxy) updatePath() {
+	path := os.Getenv("PATH")
+	parts := append(p.PathPrepend, filepath.SplitList(path)...)
+	parts = append(parts, p.PathAppend...)
+	path = strings.Join(parts, ":")
+	os.Setenv("PATH", path)
+	log.Printf("PROXY: update path: %s", path)
 }
 
 func (p *Proxy) Execute(args []string) error {
@@ -118,13 +131,18 @@ func (p *Proxy) Execute(args []string) error {
 		return fmt.Errorf("Failed to set UID: %s")
 	}
 
+	p.updatePath()
+
 	env := []string{"USER=" + u.Username}
 	env = append(env, os.Environ()...)
+	log.Printf("PROXY: ENV: %v", env)
 
 	cmd, err := exec.LookPath(args[0])
 	if err != nil {
 		return fmt.Errorf("Failed to find %s: %s", args[0], err)
 	}
+
+	log.Printf("PROXY: EXEC %s %v", cmd, args)
 
 	if err := syscall.Exec(cmd, args, env); err != nil {
 		return fmt.Errorf("Failed to exec %s: %s", err)

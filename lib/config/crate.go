@@ -36,6 +36,8 @@ type Crate struct {
 	ImageCmd     string            `toml:"image-cmd"`
 	MountHome    bool              `toml:"mount-home"`
 	Network      string            `toml:"network"`
+	PathAppend   []string          `toml:"path-append"`
+	PathPrepend  []string          `toml:"path-prepend"`
 	Ports        []string          `toml:"ports"`
 	ProjectMount string            `toml:"project-mount"`
 	SetupPost    string            `toml:"setup-post"`

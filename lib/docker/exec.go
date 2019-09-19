@@ -136,7 +136,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	log.Printf("User: %s, Workdir: %s", user, workdir)
 
 	oldAPI := versions.LessThan(c.c.ClientVersion(), "1.35")
-	if oldAPI || tty || len(crate.Groups) > 0 {
+	if oldAPI || tty || len(crate.Groups) > 0 || len(crate.PathAppend) > 0 || len(crate.PathPrepend) > 0 {
 		proxy := []string{"/sbin/wr-init", "proxy"}
 		if config.Debug {
 			proxy = append(proxy, "-d")
@@ -149,6 +149,12 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		}
 		for _, group := range crate.Groups {
 			proxy = append(proxy, "--group", group)
+		}
+		for _, path := range crate.PathPrepend {
+			proxy = append(proxy, "--prepend-path", path)
+		}
+		for _, path := range crate.PathAppend {
+			proxy = append(proxy, "--append-path", path)
 		}
 		log.Printf("USE PROXY (workdir / terminal sync workaround): %s", proxy)
 		cmds = append(proxy, cmds...)
