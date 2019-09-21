@@ -218,7 +218,12 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 			}
 			cmd = append(cmd, buf[:n]...)
 		}
+		cmd = bytes.TrimSpace(cmd)
 		log.Printf("READ: %s\n", cmd)
+
+		if string(cmd) != "PROXY READY" {
+			return -1, fmt.Errorf("Failed to get proxy ready, got: %s", cmd)
+		}
 
 		log.Printf("Initial Resize")
 		for resizeTty() != nil {
