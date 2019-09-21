@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"path/filepath"
 
 	"github.com/burntsushi/toml"
 )
@@ -24,7 +25,10 @@ func parse(path string) (*Project, error) {
 	log.Printf("Unknown config keys: %s", md.Undecoded())
 	log.Printf("Project File: %s", path)
 	log.Printf("Project: %#v", project)
-	project.path = path
+	project.path, err = filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
 	project.meta = md
 	return &project, nil
 }

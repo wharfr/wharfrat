@@ -8,6 +8,7 @@ import (
 	"github.com/burntsushi/toml"
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/venv"
 )
 
 type ExecCfg struct {
@@ -74,5 +75,12 @@ func (e *ExecCfg) Execute(args []string) (int, error) {
 		args = e.Args
 	}
 	cmd = append(cmd, args...)
-	return client.ExecCmd(container, cmd, crate, e.User, "")
+	ret, err := client.ExecCmd(container, cmd, crate, e.User, "")
+	if err != nil {
+		return -1, err
+	}
+
+	venv.Update(client, container, crate, e.User, cmd)
+
+	return ret, nil
 }
