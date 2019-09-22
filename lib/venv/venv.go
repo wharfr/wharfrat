@@ -19,8 +19,10 @@ type binary struct {
 }
 
 type state struct {
-	crate    *config.Crate `json:"-"`
+	Project  string        `toml:"project"`
+	Crate    string        `toml:"crate"`
 	Binaries []binary      `json:"binaries"`
+	EnvPath  string        `json:"envpath"`
 }
 
 func copySelf(dest string) error {
@@ -49,8 +51,8 @@ func copySelf(dest string) error {
 	return nil
 }
 
-func ensure(crate *config.Crate) error {
-	binPath := filepath.Join(crate.EnvPath, "bin")
+func ensure(path string) error {
+	binPath := filepath.Join(path, "bin")
 	if _, err := os.Stat(binPath); err == nil {
 		// bin path exists, so assume entire environment has been setup
 		return nil
@@ -107,17 +109,50 @@ func (s *state) getDelta(paths []string) []string {
 	return delta
 }
 
-func loadState(crate *config.Crate) (*state, error) {
-	if err := ensure(crate); err != nil {
-		return nil, err
+func Create(relPath string, crate *config.Crate, c *docker.Connection) error {
+	path, err := filepath.Abs(relPath)
+	if err != nil {
+		return fmt.Errorf("failed to convert %s to absolute path: %s", err)
+	}
+	if _, err := os.Stat(path); err == nil {
+		return fmt.Errorf("%s already exists", path)
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to stat %s: %s", err)
+	}
+	if err := ensure(path); err != nil {
+		return fmt.Errorf("failed to setup environment: %s", err)
 	}
 	s := state{
-		crate: crate,
+		Project: crate.ProjectPath(),
+		Crate:   crate.Name(),
+		EnvPath: path,
 	}
-	statePath := filepath.Join(crate.EnvPath, ".state.json")
+	container, err := c.GetContainer(crate.ContainerName())
+	if err != nil {
+		return fmt.Errorf("Failed to get docker container: %s", err)
+	}
+	if container != nil {
+		if err := s.Update(c, container.ID, crate, "", nil); err != nil {
+			return fmt.Errorf("failed to update exported binaries: %s", err)
+		}
+	}
+	if err := s.Save(); err != nil {
+		return fmt.Errorf("failed to save state: %s", err)
+	}
+	return nil
+}
+
+func loadState() (*state, error) {
+	envPath := os.Getenv("WHARFRAT_ENV")
+	if envPath == "" {
+		// no environment enabled
+		return nil, nil
+	}
+	s := state{}
+	statePath := filepath.Join(envPath, ".state.json")
 	f, err := os.Open(statePath)
 	if os.IsNotExist(err) {
-		return &s, nil
+		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
@@ -125,12 +160,19 @@ func loadState(crate *config.Crate) (*state, error) {
 	if err := json.NewDecoder(f).Decode(&s); err != nil {
 		return nil, err
 	}
+	if s.EnvPath != envPath {
+		return nil, fmt.Errorf("environment may have been moved?")
+	}
 	return &s, nil
+}
+
+func (s *state) MatchesCrate(crate *config.Crate) bool {
+	return crate.Name() == s.Crate && crate.ProjectPath() == s.Project
 }
 
 func (s *state) createBinary(path string, cmd []string) error {
 	_, name := filepath.Split(path)
-	refPath := filepath.Join(s.crate.EnvPath, "bin", name)
+	refPath := filepath.Join(s.EnvPath, "bin", name)
 	f, err := os.Create(refPath)
 	if err != nil {
 		return err
@@ -140,15 +182,15 @@ func (s *state) createBinary(path string, cmd []string) error {
 		os.Remove(refPath)
 		return err
 	}
-	if _, err := f.WriteString(fmt.Sprintf("#!%s/bin/wr-exec\n\n", s.crate.EnvPath)); err != nil {
+	if _, err := f.WriteString(fmt.Sprintf("#!%s/bin/wr-exec\n\n", s.EnvPath)); err != nil {
 		os.Remove(refPath)
 		return err
 	}
-	if _, err := f.WriteString(fmt.Sprintf("project = \"%s\"\n", s.crate.ProjectPath())); err != nil {
+	if _, err := f.WriteString(fmt.Sprintf("project = \"%s\"\n", s.Project)); err != nil {
 		os.Remove(refPath)
 		return err
 	}
-	if _, err := f.WriteString(fmt.Sprintf("crate = \"%s\"\n", s.crate.Name())); err != nil {
+	if _, err := f.WriteString(fmt.Sprintf("crate = \"%s\"\n", s.Crate)); err != nil {
 		os.Remove(refPath)
 		return err
 	}
@@ -174,7 +216,7 @@ func (s *state) exportBinaries(cmd []string, paths[]string) error {
 }
 
 func (s *state) Save() error {
-	statePath := filepath.Join(s.crate.EnvPath, ".state.json")
+	statePath := filepath.Join(s.EnvPath, ".state.json")
 	f, err := os.Create(statePath)
 	if err != nil {
 		return err
@@ -186,29 +228,41 @@ func (s *state) Save() error {
 	return nil
 }
 
+func (s *state) Update(c *docker.Connection, id string, crate *config.Crate, user string, cmd []string) error {
+	paths, err := getBinaries(c, id, crate, user, crate.ExportBin)
+	log.Printf("OUTPUT: %s %s %s", cmd, paths, err)
+	if err != nil {
+		log.Printf("ERROR: Failed to update exported binaries: %s", err)
+		return err
+	}
+	delta := s.getDelta(paths)
+	if len(delta) == 0 {
+		// Nothing changed
+		return nil
+	}
+	if err := s.exportBinaries(cmd, delta); err != nil {
+		log.Printf("ERROR: Failed to export binaries: %s", err)
+		return err
+	}
+	return nil
+}
+
 func Update(c *docker.Connection, id string, crate *config.Crate, user string, cmd []string) {
 	if len(crate.ExportBin) == 0 {
 		// no export paths configured, so do nothing
 		return
 	}
-	paths, err := getBinaries(c, id, crate, user, crate.ExportBin)
-	log.Printf("OUTPUT: %s %s %s", cmd, paths, err)
-	if err != nil {
-		log.Printf("ERROR: Failed to update exported binaries: %s", err)
-		return
-	}
-	state, err := loadState(crate)
+	state, err := loadState()
 	if err != nil {
 		log.Printf("ERROR: Failed to create environment: %s", err)
 		return
 	}
-	delta := state.getDelta(paths)
-	if len(delta) == 0 {
-		// Nothing changed
+	if state == nil || !state.MatchesCrate(crate) {
+		// environment is either not enabled, or for another project/crate
 		return
 	}
-	if err := state.exportBinaries(cmd, delta); err != nil {
-		log.Printf("ERROR: Failed to export binaries: %s", err)
+	if err := state.Update(c, id, crate, user, cmd); err != nil {
+		log.Printf("ERROR: Failed to update exported binaries: %s", err)
 		return
 	}
 	if err := state.Save(); err != nil {
@@ -217,16 +271,41 @@ func Update(c *docker.Connection, id string, crate *config.Crate, user string, c
 	}
 }
 
-func Delete(crate *config.Crate) {
-	if err := os.RemoveAll(crate.EnvPath); err != nil {
+func (s *state) Delete() {
+	if err := os.RemoveAll(s.EnvPath); err != nil {
 		log.Printf("ERROR: Failed to delete environment: %s", err)
 		return
 	}
 }
 
 func Rebuild(c *docker.Connection, id string, crate *config.Crate) {
-	Delete(crate)
-	Update(c, id, crate, "", nil)
+	state, err := loadState()
+	if err != nil {
+		log.Printf("ERROR: Failed to load state: %s", err)
+		return
+	}
+	if state == nil || !state.MatchesCrate(crate) {
+		// environment is either not enabled, or for another project/crate
+		return
+	}
+	state.Delete()
+	Create(state.EnvPath, crate, c)
+}
+
+func DisplayInfo() {
+	state, err := loadState()
+	if err != nil {
+		log.Printf("ERROR: Failed to load state: %s", err)
+		fmt.Println("Failed to load environment state")
+		return
+	}
+	if state == nil {
+		fmt.Println("No Environment")
+		return
+	}
+	fmt.Printf("Path: %s\n", state.EnvPath)
+	fmt.Printf("Project: %s\n", state.Project)
+	fmt.Printf("Crate: %s\n", state.Crate)
 }
 
 func init() {

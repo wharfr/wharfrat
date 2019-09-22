@@ -43,11 +43,9 @@ type Crate struct {
 	Tmpfs        []string          `toml:"tmpfs"`
 	Volumes      []string          `toml:"volumes"`
 	WorkingDir   string            `toml:"working-dir"`
-	WrEnv        string            `toml:"wr-env"`
 	project      *Project          `toml:"-"`
 	name         string            `toml:"-"`
 	branch       string            `toml:"-"`
-	EnvPath      string            `toml:"-"`
 }
 
 const CrateNotFound = notFound("Crate Not Found")
@@ -159,13 +157,6 @@ func OpenVcCrate(projectPath, branch, crateName string, ls LabelSource) (*Crate,
 	return openCrate(project, crateName, branch, ls)
 }
 
-func (c *Crate) resolvePath(path string) string {
-	if filepath.IsAbs(path) {
-		return path
-	}
-	return filepath.Join(filepath.Dir(c.project.path), path)
-}
-
 func (c *Crate) SetDefaults(ls LabelSource) error {
 	if !c.project.meta.IsDefined("crates", c.name, "mount-home") {
 		c.MountHome = true
@@ -202,11 +193,6 @@ func (c *Crate) SetDefaults(ls LabelSource) error {
 		// Final fallback is /bin/sh
 		c.Shell = "/bin/sh"
 	}
-
-	if c.WrEnv == "" {
-		c.WrEnv = ".wrenv"
-	}
-	c.EnvPath = c.resolvePath(c.WrEnv)
 
 	return nil
 }
