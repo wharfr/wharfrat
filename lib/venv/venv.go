@@ -391,6 +391,9 @@ func UpdateWharfrat() error {
 		return nil
 	}
 	wrPath := filepath.Join(state.EnvPath, "bin", "wharfrat")
+	if err := os.Remove(wrPath); err != nil {
+		return fmt.Errorf("failed to remove old wharfrat: %s", err)
+	}
 	if err := copyFile(wrPath, externalWharfrat); err != nil {
 		return fmt.Errorf("failed to copy new wharfrat: %s", err)
 	}
