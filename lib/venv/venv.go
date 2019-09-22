@@ -7,10 +7,13 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/version"
 )
 
 type binary struct {
@@ -26,7 +29,11 @@ type state struct {
 }
 
 func copySelf(dest string) error {
-	in, err := os.Open("/proc/self/exe")
+	return copyFile(dest, "/proc/self/exe")
+}
+
+func copyFile(dest, source string) error {
+	in, err := os.Open(source)
 	if err != nil {
 		return err
 	}
@@ -306,6 +313,88 @@ func DisplayInfo() {
 	fmt.Printf("Path: %s\n", state.EnvPath)
 	fmt.Printf("Project: %s\n", state.Project)
 	fmt.Printf("Crate: %s\n", state.Crate)
+}
+
+func findExecutable(file string) error {
+	d, err := os.Stat(file)
+	if err != nil {
+		return err
+	}
+	if m := d.Mode(); !m.IsDir() && m&0111 != 0 {
+		return nil
+	}
+	return os.ErrPermission
+}
+
+// lookPath is exec.LookPath from the standard library, except that it ignores
+// the given directory when searching PATH
+func lookPath(file, ignore string) (string, error) {
+	if strings.Contains(file, "/") {
+		err := findExecutable(file)
+		if err == nil {
+			return file, nil
+		}
+		return "", &exec.Error{file, err}
+	}
+	path := os.Getenv("PATH")
+	for _, dir := range filepath.SplitList(path) {
+		if dir == ignore {
+			continue
+		}
+		if dir == "" {
+			// Unix shell semantics: path element "" means "."
+			dir = "."
+		}
+		path := filepath.Join(dir, file)
+		if err := findExecutable(path); err == nil {
+			return path, nil
+		}
+	}
+	return "", &exec.Error{file, exec.ErrNotFound}
+}
+
+func (s *state) findExternalWharfrat() (string, error) {
+	binPath := filepath.Join(s.EnvPath, "bin")
+	return lookPath("wharfrat", binPath)
+}
+
+func getExternalCommit(tool string) (string, error) {
+	cmd := exec.Command(tool, "version", "--commit")
+	out, err := cmd.Output()
+	return string(bytes.TrimSpace(out)), err
+}
+
+func UpdateWharfrat() error {
+	state, err := loadState()
+	if err != nil {
+		return fmt.Errorf("failed to load state: %s", err)
+	}
+	if state == nil {
+		return fmt.Errorf("environment not activated")
+	}
+	externalWharfrat, err := state.findExternalWharfrat()
+	if err != nil {
+		return fmt.Errorf("failed to find wharfrat command: %s", err)
+	}
+	if externalWharfrat == "" {
+		// there is no external wharfrat
+		return nil
+	}
+	log.Printf("External Wharfrat: %s", externalWharfrat)
+	externalCommit, err := getExternalCommit(externalWharfrat)
+	if err != nil {
+		return fmt.Errorf("failed to get version of external wharfrat: %s", err)
+	}
+	log.Printf("COMMIT: %s vs %s", externalCommit, version.Commit())
+	if externalCommit == version.Commit() {
+		// already up to date
+		return nil
+	}
+	wrPath := filepath.Join(state.EnvPath, "bin", "wharfrat")
+	if err := copyFile(wrPath, externalWharfrat); err != nil {
+		return fmt.Errorf("failed to copy new wharfrat: %s", err)
+	}
+	return nil
 }
 
 func init() {

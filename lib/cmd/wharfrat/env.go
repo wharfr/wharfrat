@@ -61,7 +61,7 @@ func (e *Env) Usage() string {
 func (eu *EnvUpdate) Execute(args []string) error {
 	log.Printf("Args: %#v, Opts: %#v", args, eu)
 
-	return nil
+	return venv.UpdateWharfrat()
 }
 
 func (er *EnvRebuild) Execute(args []string) error {
