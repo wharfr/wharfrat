@@ -205,6 +205,10 @@ func (s *state) createBinary(path string, cmd []string) error {
 		os.Remove(refPath)
 		return err
 	}
+	if _, err := f.WriteString("auto-clean = true\n"); err != nil {
+		os.Remove(refPath)
+		return err
+	}
 	return nil
 }
 

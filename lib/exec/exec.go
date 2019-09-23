@@ -12,13 +12,14 @@ import (
 )
 
 type ExecCfg struct {
-	Args    []string `toml:"args"`
-	Command []string `toml:"command"`
-	Crate   string   `toml:"crate"`
-	Project string   `toml:"project"`
-	User    string   `toml:"user"`
-	path    string
-	meta    toml.MetaData
+	Args      []string `toml:"args"`
+	Command   []string `toml:"command"`
+	Crate     string   `toml:"crate"`
+	Project   string   `toml:"project"`
+	User      string   `toml:"user"`
+	AutoClean bool     `toml:"auto-clean"`
+	path      string
+	meta      toml.MetaData
 }
 
 func Parse(path string) (*ExecCfg, error) {
@@ -62,7 +63,7 @@ func (e *ExecCfg) Execute(args []string) (int, error) {
 		return 0, err
 	}
 	log.Printf("CRATE: %#v", crate)
-	container, err := client.EnsureRunning(crate, false, false)
+	container, err := client.EnsureRunning(crate, false, e.AutoClean)
 	if err != nil {
 		return 1, fmt.Errorf("Failed to run container: %s", err)
 	}
