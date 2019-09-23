@@ -364,7 +364,7 @@ func getExternalCommit(tool string) (string, error) {
 	return string(bytes.TrimSpace(out)), err
 }
 
-func UpdateWharfrat() error {
+func UpdateWharfrat(force bool) error {
 	state, err := loadState()
 	if err != nil {
 		return fmt.Errorf("failed to load state: %s", err)
@@ -385,11 +385,12 @@ func UpdateWharfrat() error {
 	if err != nil {
 		return fmt.Errorf("failed to get version of external wharfrat: %s", err)
 	}
-	log.Printf("COMMIT: %s vs %s", externalCommit, version.Commit())
-	if externalCommit == version.Commit() {
+	if externalCommit == version.Commit() && !force {
 		// already up to date
+		log.Printf("Same commit hash: %s", version.Commit())
 		return nil
 	}
+	log.Printf("UPDATING: %s -> %s", version.Commit(), externalCommit)
 	wrPath := filepath.Join(state.EnvPath, "bin", "wharfrat")
 	if err := os.Remove(wrPath); err != nil {
 		return fmt.Errorf("failed to remove old wharfrat: %s", err)

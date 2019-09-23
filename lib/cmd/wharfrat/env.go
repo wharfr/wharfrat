@@ -14,7 +14,9 @@ type EnvCreate struct {
 	Crate string `long:"crate" short:"c" value-name:"NAME" description:"Crate to expose in environment"`
 }
 
-type EnvUpdate struct {}
+type EnvUpdate struct {
+	Force bool `short:"f" long:"force" description:"Force update, even if commit hash is the same"`
+}
 
 type EnvRebuild struct {}
 
@@ -61,7 +63,7 @@ func (e *Env) Usage() string {
 func (eu *EnvUpdate) Execute(args []string) error {
 	log.Printf("Args: %#v, Opts: %#v", args, eu)
 
-	return venv.UpdateWharfrat()
+	return venv.UpdateWharfrat(eu.Force)
 }
 
 func (er *EnvRebuild) Execute(args []string) error {
