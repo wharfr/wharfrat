@@ -50,3 +50,7 @@ func LocateProject(start string) (*Project, error) {
 	}
 	return parse(path)
 }
+
+func (p *Project) Path() string {
+	return p.path
+}

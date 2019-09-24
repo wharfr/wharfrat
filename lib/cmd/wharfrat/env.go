@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"log"
 
-	"wharfr.at/wharfrat/lib/config"
+	// "wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
 	// "wharfr.at/wharfrat/lib/environ"
 	"wharfr.at/wharfrat/lib/venv"
 )
 
 type EnvCreate struct {
-	Crate string `long:"crate" short:"c" value-name:"NAME" description:"Crate to expose in environment"`
+	Crates []string `long:"crate" short:"c" value-name:"NAME" description:"Crate to expose in environment"`
 }
 
 type EnvUpdate struct {
@@ -47,13 +47,7 @@ func (ec *EnvCreate) Execute(args []string) error {
 	}
 	defer c.Close()
 
-	crate, err := config.GetCrate(".", ec.Crate, c)
-	if err != nil {
-		return fmt.Errorf("Config error: %s", err)
-	}
-	log.Printf("Crate: %#v", crate)
-
-	return venv.Create(path, crate, c)
+	return venv.Create(path, ec.Crates, c)
 }
 
 func (e *Env) Usage() string {

@@ -22,10 +22,10 @@ type binary struct {
 }
 
 type state struct {
-	Project  string        `toml:"project"`
-	Crate    string        `toml:"crate"`
-	Binaries []binary      `json:"binaries"`
-	EnvPath  string        `json:"envpath"`
+	Project  string              `json:"project"`
+	Crates   []string            `json:"crates"`
+	Binaries map[string][]binary `json:"binaries"`
+	EnvPath  string              `json:"envpath"`
 }
 
 func copySelf(dest string) error {
@@ -99,9 +99,9 @@ func getBinaries(c *docker.Connection, id string, crate *config.Crate, user stri
 	return paths, nil
 }
 
-func (s *state) getDelta(paths []string) []string {
+func (s *state) getDelta(crate string, paths []string) []string {
 	old := map[string]bool{}
-	for _, bin := range s.Binaries {
+	for _, bin := range s.Binaries[crate] {
 		for _, path := range bin.Paths {
 			old[path] = true
 		}
@@ -116,7 +116,22 @@ func (s *state) getDelta(paths []string) []string {
 	return delta
 }
 
-func Create(relPath string, crate *config.Crate, c *docker.Connection) error {
+func getCrateNames(project *config.Project) []string {
+	crates := make([]string, 0, len(project.Crates))
+	for name := range project.Crates {
+		crates = append(crates, name)
+	}
+	return crates
+}
+
+func Create(relPath string, crates []string, c *docker.Connection) error {
+	proj, err := config.LocateProject(".")
+	if err != nil {
+		return fmt.Errorf("failed to find project: %s", err)
+	}
+	if len(crates) == 0 {
+		crates = getCrateNames(proj)
+	}
 	path, err := filepath.Abs(relPath)
 	if err != nil {
 		return fmt.Errorf("failed to convert %s to absolute path: %s", err)
@@ -130,20 +145,35 @@ func Create(relPath string, crate *config.Crate, c *docker.Connection) error {
 		return fmt.Errorf("failed to setup environment: %s", err)
 	}
 	s := state{
-		Project: crate.ProjectPath(),
-		Crate:   crate.Name(),
-		EnvPath: path,
+		Project:  proj.Path(),
+		Crates:   crates,
+		EnvPath:  path,
+		Binaries: map[string][]binary{},
 	}
-	container, err := c.GetContainer(crate.ContainerName())
-	if err != nil {
-		return fmt.Errorf("Failed to get docker container: %s", err)
-	}
-	if container != nil {
-		if err := s.Update(c, container.ID, crate, "", nil); err != nil {
-			return fmt.Errorf("failed to update exported binaries: %s", err)
+	for _, name := range crates {
+		crate, err := config.GetCrate(".", name, c)
+		if err == config.CrateNotFound {
+			os.RemoveAll(path)
+			return fmt.Errorf("Unknown crate: %s", crate)
+		} else if err != nil {
+			os.RemoveAll(path)
+			return fmt.Errorf("Config error: %s", err)
+		}
+		log.Printf("Crate: %#v", crate)
+		container, err := c.GetContainer(crate.ContainerName())
+		if err != nil {
+			os.RemoveAll(path)
+			return fmt.Errorf("Failed to get docker container: %s", err)
+		}
+		if container != nil {
+			if err := s.Update(c, container.ID, crate, "", nil); err != nil {
+				os.RemoveAll(path)
+				return fmt.Errorf("failed to update exported binaries: %s", err)
+			}
 		}
 	}
 	if err := s.Save(); err != nil {
+		os.RemoveAll(path)
 		return fmt.Errorf("failed to save state: %s", err)
 	}
 	return nil
@@ -174,7 +204,15 @@ func loadState() (*state, error) {
 }
 
 func (s *state) MatchesCrate(crate *config.Crate) bool {
-	return crate.Name() == s.Crate && crate.ProjectPath() == s.Project
+	if crate.ProjectPath() != s.Project {
+		return false
+	}
+	for _, name := range s.Crates {
+		if crate.Name() == name {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *state) createBinary(crate, path string) error {
@@ -219,7 +257,7 @@ func (s *state) exportBinaries(crate string, cmd []string, paths[]string) error 
 			return err
 		}
 	}
-	s.Binaries = append(s.Binaries, binary{
+	s.Binaries[crate] = append(s.Binaries[crate], binary{
 		Command: cmd,
 		Paths:   paths,
 	})
@@ -246,7 +284,7 @@ func (s *state) Update(c *docker.Connection, id string, crate *config.Crate, use
 		log.Printf("ERROR: Failed to update exported binaries: %s", err)
 		return err
 	}
-	delta := s.getDelta(paths)
+	delta := s.getDelta(crate.Name(), paths)
 	if len(delta) == 0 {
 		// Nothing changed
 		return nil
@@ -300,7 +338,7 @@ func Rebuild(c *docker.Connection, id string, crate *config.Crate) {
 		return
 	}
 	state.Delete()
-	Create(state.EnvPath, crate, c)
+	Create(state.EnvPath, state.Crates, c)
 }
 
 func DisplayInfo() {
@@ -316,7 +354,7 @@ func DisplayInfo() {
 	}
 	fmt.Printf("Path: %s\n", state.EnvPath)
 	fmt.Printf("Project: %s\n", state.Project)
-	fmt.Printf("Crate: %s\n", state.Crate)
+	fmt.Printf("Crates: %s\n", strings.Join(state.Crates, ", "))
 }
 
 func findExecutable(file string) error {
