@@ -177,7 +177,7 @@ func (s *state) MatchesCrate(crate *config.Crate) bool {
 	return crate.Name() == s.Crate && crate.ProjectPath() == s.Project
 }
 
-func (s *state) createBinary(path string, cmd []string) error {
+func (s *state) createBinary(crate, path string) error {
 	_, name := filepath.Split(path)
 	refPath := filepath.Join(s.EnvPath, "bin", name)
 	f, err := os.Create(refPath)
@@ -197,7 +197,7 @@ func (s *state) createBinary(path string, cmd []string) error {
 		os.Remove(refPath)
 		return err
 	}
-	if _, err := f.WriteString(fmt.Sprintf("crate = \"%s\"\n", s.Crate)); err != nil {
+	if _, err := f.WriteString(fmt.Sprintf("crate = \"%s\"\n", crate)); err != nil {
 		os.Remove(refPath)
 		return err
 	}
@@ -212,10 +212,10 @@ func (s *state) createBinary(path string, cmd []string) error {
 	return nil
 }
 
-func (s *state) exportBinaries(cmd []string, paths[]string) error {
+func (s *state) exportBinaries(crate string, cmd []string, paths[]string) error {
 	log.Printf("EXPORT: %s %s", cmd, paths)
 	for _, path := range paths {
-		if err := s.createBinary(path, cmd); err != nil {
+		if err := s.createBinary(crate, path); err != nil {
 			return err
 		}
 	}
@@ -251,7 +251,7 @@ func (s *state) Update(c *docker.Connection, id string, crate *config.Crate, use
 		// Nothing changed
 		return nil
 	}
-	if err := s.exportBinaries(cmd, delta); err != nil {
+	if err := s.exportBinaries(crate.Name(), cmd, delta); err != nil {
 		log.Printf("ERROR: Failed to export binaries: %s", err)
 		return err
 	}
