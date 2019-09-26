@@ -18,14 +18,11 @@ type EnvUpdate struct {
 	Force bool `short:"f" long:"force" description:"Force update, even if commit hash is the same"`
 }
 
-type EnvRebuild struct {}
-
 type EnvInfo struct {}
 
 type Env struct {
 	EnvCreate  `command:"create" description:"Create a new environment"`
 	EnvUpdate  `command:"update" description:"Update the local wharfrat in the environment"`
-	EnvRebuild `command:"rebuild" description:"Force a rebuild of the environment"`
 	EnvInfo    `command:"info" description:"Display information about the current environment"`
 }
 
@@ -58,12 +55,6 @@ func (eu *EnvUpdate) Execute(args []string) error {
 	log.Printf("Args: %#v, Opts: %#v", args, eu)
 
 	return venv.UpdateWharfrat(eu.Force)
-}
-
-func (er *EnvRebuild) Execute(args []string) error {
-	log.Printf("Args: %#v, Opts: %#v", args, er)
-
-	return nil
 }
 
 func (ei *EnvInfo) Execute(args []string) error {
