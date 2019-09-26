@@ -331,6 +331,48 @@ func (s *state) Delete() {
 	}
 }
 
+func (s *state) Rebuild(c *docker.Connection, id string, crate *config.Crate) error {
+	name := crate.Name()
+	binaries, ok := s.Binaries[name]
+	if !ok {
+		// This crate doesn't have any exported binaries
+		return nil
+	}
+	s.Binaries[name] = nil
+	if err := s.Update(c, id, crate, "", "", nil); err != nil {
+		return fmt.Errorf("failed to update exported binaries: %s", err)
+	}
+	for _, bin := range binaries {
+		if err := s.restoreItem(c, id, crate, bin); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *state) restoreItem(c *docker.Connection, id string, crate *config.Crate, bin binary) error {
+	if len(bin.Command) == 0 {
+		// no command - no nothing to run
+		return nil
+	}
+	delta := s.getDelta(crate.Name(), bin.Paths)
+	if len(delta) == 0 {
+		return nil
+	}
+	log.Printf("RESTORE: %s %s", bin.Command, delta)
+	ret, err := c.ExecCmd(id, bin.Command, crate, bin.User, bin.Workdir)
+	if err != nil {
+		return fmt.Errorf("Failed to exec command (%s): %s", bin.Command, err)
+	}
+	if ret != 0 {
+		return fmt.Errorf("Running command (%s) failed", bin.Command)
+	}
+	if err := s.Update(c, id, crate, bin.User, bin.Workdir, bin.Command); err != nil {
+		return fmt.Errorf("Failed to update exported binaries: %s", err)
+	}
+	return nil
+}
+
 func Rebuild(c *docker.Connection, id string, crate *config.Crate) {
 	state, err := loadState()
 	if err != nil {
@@ -341,8 +383,13 @@ func Rebuild(c *docker.Connection, id string, crate *config.Crate) {
 		// environment is either not enabled, or for another project/crate
 		return
 	}
-	state.Delete()
-	Create(state.EnvPath, state.Crates, c)
+	if err := state.Rebuild(c, id, crate); err != nil {
+		log.Printf("ERROR: Failed to rebuild environment: %s", err)
+	}
+	if err := state.Save(); err != nil {
+		log.Printf("ERROR: Failed to save state: %s", err)
+		return
+	}
 }
 
 func DisplayInfo() {
