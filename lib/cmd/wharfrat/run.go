@@ -103,7 +103,7 @@ func (opts *Run) client(args []string) (int, error) {
 
 	log.Printf("RETCODE: %d", ret)
 
-	venv.Update(c, container, crate, opts.User, args)
+	venv.Update(c, container, crate, opts.User, opts.Workdir, args)
 
 	return ret, nil
 }

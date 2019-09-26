@@ -19,6 +19,8 @@ import (
 type binary struct {
 	Command []string `json:"command"`
 	Paths   []string `json:"paths"`
+	User    string   `json:"user"`
+	Workdir string   `json:"workdir"`
 }
 
 type state struct {
@@ -166,7 +168,7 @@ func Create(relPath string, crates []string, c *docker.Connection) error {
 			return fmt.Errorf("Failed to get docker container: %s", err)
 		}
 		if container != nil {
-			if err := s.Update(c, container.ID, crate, "", nil); err != nil {
+			if err := s.Update(c, container.ID, crate, "", "", nil); err != nil {
 				os.RemoveAll(path)
 				return fmt.Errorf("failed to update exported binaries: %s", err)
 			}
@@ -250,7 +252,7 @@ func (s *state) createBinary(crate, path string) error {
 	return nil
 }
 
-func (s *state) exportBinaries(crate string, cmd []string, paths[]string) error {
+func (s *state) exportBinaries(crate string, cmd []string, user, workdir string, paths[]string) error {
 	log.Printf("EXPORT: %s %s", cmd, paths)
 	for _, path := range paths {
 		if err := s.createBinary(crate, path); err != nil {
@@ -260,6 +262,8 @@ func (s *state) exportBinaries(crate string, cmd []string, paths[]string) error 
 	s.Binaries[crate] = append(s.Binaries[crate], binary{
 		Command: cmd,
 		Paths:   paths,
+		User:    user,
+		Workdir: workdir,
 	})
 	return nil
 }
@@ -277,7 +281,7 @@ func (s *state) Save() error {
 	return nil
 }
 
-func (s *state) Update(c *docker.Connection, id string, crate *config.Crate, user string, cmd []string) error {
+func (s *state) Update(c *docker.Connection, id string, crate *config.Crate, user, workdir string, cmd []string) error {
 	paths, err := getBinaries(c, id, crate, user, crate.ExportBin)
 	log.Printf("OUTPUT: %s %s %s", cmd, paths, err)
 	if err != nil {
@@ -289,14 +293,14 @@ func (s *state) Update(c *docker.Connection, id string, crate *config.Crate, use
 		// Nothing changed
 		return nil
 	}
-	if err := s.exportBinaries(crate.Name(), cmd, delta); err != nil {
+	if err := s.exportBinaries(crate.Name(), cmd, user, workdir, delta); err != nil {
 		log.Printf("ERROR: Failed to export binaries: %s", err)
 		return err
 	}
 	return nil
 }
 
-func Update(c *docker.Connection, id string, crate *config.Crate, user string, cmd []string) {
+func Update(c *docker.Connection, id string, crate *config.Crate, user, workdir string, cmd []string) {
 	if len(crate.ExportBin) == 0 {
 		// no export paths configured, so do nothing
 		return
@@ -310,7 +314,7 @@ func Update(c *docker.Connection, id string, crate *config.Crate, user string, c
 		// environment is either not enabled, or for another project/crate
 		return
 	}
-	if err := state.Update(c, id, crate, user, cmd); err != nil {
+	if err := state.Update(c, id, crate, user, workdir, cmd); err != nil {
 		log.Printf("ERROR: Failed to update exported binaries: %s", err)
 		return
 	}
