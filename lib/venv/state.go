@@ -25,23 +25,6 @@ type state struct {
 	EnvPath  string              `json:"envpath"`
 }
 
-func (s *state) getDelta(crate string, paths []string) []string {
-	old := map[string]bool{}
-	for _, bin := range s.Binaries[crate] {
-		for _, path := range bin.Paths {
-			old[path] = true
-		}
-	}
-	delta := make([]string, 0, len(paths))
-	for _, path := range paths {
-		if !old[path] {
-			delta = append(delta, path)
-		}
-	}
-	log.Printf("DELTA: %s -> %s", paths, delta)
-	return delta
-}
-
 func loadState() (*state, error) {
 	envPath := os.Getenv("WHARFRAT_ENV")
 	if envPath == "" {
@@ -64,6 +47,51 @@ func loadState() (*state, error) {
 		return nil, fmt.Errorf("environment may have been moved?")
 	}
 	return &s, nil
+}
+
+func newState(path, project string, crates []string, c *docker.Connection) (*state, error) {
+	s := &state{
+		Project:  project,
+		Crates:   crates,
+		EnvPath:  path,
+		Binaries: map[string][]binary{},
+	}
+	for _, name := range crates {
+		crate, err := config.GetCrate(".", name, c)
+		if err == config.CrateNotFound {
+			return nil, fmt.Errorf("Unknown crate: %s", crate)
+		} else if err != nil {
+			return nil, fmt.Errorf("Config error: %s", err)
+		}
+		log.Printf("Crate: %#v", crate)
+		container, err := c.GetContainer(crate.ContainerName())
+		if err != nil {
+			return nil, fmt.Errorf("Failed to get docker container: %s", err)
+		}
+		if container != nil {
+			if err := s.Update(c, container.ID, crate, "", "", nil); err != nil {
+				return nil, fmt.Errorf("failed to update exported binaries: %s", err)
+			}
+		}
+	}
+	return s, nil
+}
+
+func (s *state) getDelta(crate string, paths []string) []string {
+	old := map[string]bool{}
+	for _, bin := range s.Binaries[crate] {
+		for _, path := range bin.Paths {
+			old[path] = true
+		}
+	}
+	delta := make([]string, 0, len(paths))
+	for _, path := range paths {
+		if !old[path] {
+			delta = append(delta, path)
+		}
+	}
+	log.Printf("DELTA: %s -> %s", paths, delta)
+	return delta
 }
 
 func (s *state) MatchesCrate(crate *config.Crate) bool {

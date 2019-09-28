@@ -32,33 +32,10 @@ func Create(relPath string, crates []string, c *docker.Connection) error {
 	if err := ensure(path); err != nil {
 		return fmt.Errorf("failed to setup environment: %s", err)
 	}
-	s := state{
-		Project:  proj.Path(),
-		Crates:   crates,
-		EnvPath:  path,
-		Binaries: map[string][]binary{},
-	}
-	for _, name := range crates {
-		crate, err := config.GetCrate(".", name, c)
-		if err == config.CrateNotFound {
-			os.RemoveAll(path)
-			return fmt.Errorf("Unknown crate: %s", crate)
-		} else if err != nil {
-			os.RemoveAll(path)
-			return fmt.Errorf("Config error: %s", err)
-		}
-		log.Printf("Crate: %#v", crate)
-		container, err := c.GetContainer(crate.ContainerName())
-		if err != nil {
-			os.RemoveAll(path)
-			return fmt.Errorf("Failed to get docker container: %s", err)
-		}
-		if container != nil {
-			if err := s.Update(c, container.ID, crate, "", "", nil); err != nil {
-				os.RemoveAll(path)
-				return fmt.Errorf("failed to update exported binaries: %s", err)
-			}
-		}
+	s, err := newState(path, proj.Path(), crates, c)
+	if err != nil {
+		os.RemoveAll(path)
+		return err
 	}
 	if err := s.Save(); err != nil {
 		os.RemoveAll(path)
