@@ -14,6 +14,10 @@ wr-deactivate() {
         unset _OLD_WRENV_PATH
     fi
 
+    if [ -n "${BASH_VERSION-}" ]; then
+        hash -r
+    fi
+
     if ! [ -z "${_OLD_WRENV_PS1+_}" ]; then
         PS1="$_OLD_WRENV_PS1"
         export PS1
@@ -41,6 +45,10 @@ if [ -z "${WHARFRAT_ENV_DISABLE_PROMPT-}" ]; then
 	_OLD_WRENV_PS1="$PS1"
 	PS1="(wr:$(basename "$WHARFRAT_ENV")) $PS1"
 	export PS1
+fi
+
+if [ -n "${BASH_VERSION-}" ]; then
+    hash -r
 fi
 
 if [ -z "${WHARFRAT_ENV_QUIET-}" ]; then
