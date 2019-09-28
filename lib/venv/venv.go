@@ -37,6 +37,10 @@ func Create(relPath string, crates []string, c *docker.Connection) error {
 		os.RemoveAll(path)
 		return err
 	}
+	if err := writeActivate(path); err != nil {
+		os.RemoveAll(path)
+		return fmt.Errorf("failed to write activate script: %s", err)
+	}
 	if err := s.Save(); err != nil {
 		os.RemoveAll(path)
 		return fmt.Errorf("failed to save state: %s", err)
