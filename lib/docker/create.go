@@ -192,6 +192,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		DNS:          []string{},
 		DNSSearch:    []string{},
 		DNSOptions:   []string{},
+		NetworkMode:  container.NetworkMode(crate.Network),
 	}
 
 	networkingConfig := &network.NetworkingConfig{}
