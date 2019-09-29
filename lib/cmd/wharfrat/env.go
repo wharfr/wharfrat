@@ -4,26 +4,22 @@ import (
 	"fmt"
 	"log"
 
-	// "wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
-	// "wharfr.at/wharfrat/lib/environ"
 	"wharfr.at/wharfrat/lib/venv"
 )
-
-type EnvCreate struct {
-	Crates []string `long:"crate" short:"c" value-name:"NAME" description:"Crate to expose in environment"`
-}
-
-type EnvUpdate struct {
-	Force bool `short:"f" long:"force" description:"Force update, even if commit hash is the same"`
-}
-
-type EnvInfo struct {}
 
 type Env struct {
 	EnvCreate  `command:"create" description:"Create a new environment"`
 	EnvUpdate  `command:"update" description:"Update the local wharfrat in the environment"`
 	EnvInfo    `command:"info" description:"Display information about the current environment"`
+}
+
+func (e *Env) Usage() string {
+	return "[env-OPTIONS]"
+}
+
+type EnvCreate struct {
+	Crates []string `long:"crate" short:"c" value-name:"NAME" description:"Crate to expose in environment"`
 }
 
 func (ec *EnvCreate) Usage() string {
@@ -47,8 +43,8 @@ func (ec *EnvCreate) Execute(args []string) error {
 	return venv.Create(path, ec.Crates, c)
 }
 
-func (e *Env) Usage() string {
-	return "[env-OPTIONS]"
+type EnvUpdate struct {
+	Force bool `short:"f" long:"force" description:"Force update, even if commit hash is the same"`
 }
 
 func (eu *EnvUpdate) Execute(args []string) error {
@@ -56,6 +52,8 @@ func (eu *EnvUpdate) Execute(args []string) error {
 
 	return venv.UpdateWharfrat(eu.Force)
 }
+
+type EnvInfo struct {}
 
 func (ei *EnvInfo) Execute(args []string) error {
 	venv.DisplayInfo()
