@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"wharfr.at/wharfrat/lib/docker"
+	"github.com/docker/docker/api"
 )
 
 var versionString = "eyJ2ZXJzaW9uIjoidjAuOS4wLWRldiIsImNvbW1pdCI6ImYzNThkZmUyMGZjOGIwZTJlMDBhY2VlMjczYzY5Y2I0M2JiZTFiNzUiLCJidWlsZHRpbWUiOiIyMDE5LTA5LTI5VDE4OjEyOjQ0WiJ9Cg=="
@@ -23,7 +23,7 @@ var version versionInfo
 func ShowVersion() error {
 	fmt.Printf("Version: %s\n", version.Version)
 	fmt.Printf("Git Commit: %s\n", version.Commit)
-	fmt.Printf("Docker API Version: %s\n", docker.Version())
+	fmt.Printf("Docker API Version: %s\n", api.DefaultVersion)
 	fmt.Printf("Go Version: %s\n", runtime.Version())
 	fmt.Printf("Built: %s\n", version.BuildTime.Local())
 	return nil
