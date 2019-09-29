@@ -6,6 +6,7 @@ const domain = "at.wharfr.wharfrat"
 const (
 	Project = domain + ".project"
 	Crate   = domain + ".crate"
+	Commit  = domain + ".commit"
 	Config  = domain + ".config"
 	Branch  = domain + ".branch"
 	User    = domain + ".user"

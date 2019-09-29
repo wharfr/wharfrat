@@ -14,6 +14,7 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker/label"
+	"wharfr.at/wharfrat/lib/version"
 	"wharfr.at/wharfrat/lib/vc"
 
 	"github.com/docker/distribution/reference"
@@ -123,6 +124,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	labels := map[string]string{
 		label.Project: crate.ProjectPath(),
 		label.Crate:   crate.Name(),
+		label.Commit:  version.Commit(),
 		label.Config:  crate.Json(),
 		label.User:    usr.Username,
 	}

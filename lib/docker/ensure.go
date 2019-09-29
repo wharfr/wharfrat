@@ -6,6 +6,7 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker/label"
+	"wharfr.at/wharfrat/lib/version"
 )
 
 func (c *Connection) EnsureRunning(crate *config.Crate, force, removeOld bool) (string, error) {
@@ -20,8 +21,9 @@ func (c *Connection) EnsureRunning(crate *config.Crate, force, removeOld bool) (
 
 	log.Printf("FOUND %s %s", container.ID, container.State)
 
+	oldCommit := container.Config.Labels[label.Commit]
 	oldJson := container.Config.Labels[label.Config]
-	if oldJson != crate.Json() {
+	if oldJson != crate.Json() || oldCommit != version.Commit() {
 		if force {
 			log.Printf("Forcing use of container built from old config")
 		} else if removeOld {
