@@ -15,6 +15,7 @@ Welcome to wharfrat's documentation!
    basics
    configuration
    accessing-containers
+   environments
    examples
 
 Indices and tables

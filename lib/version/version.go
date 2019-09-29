@@ -10,7 +10,7 @@ import (
 	"wharfr.at/wharfrat/lib/docker"
 )
 
-var versionString = "eyJ2ZXJzaW9uIjoidjAuOC4yIiwiY29tbWl0IjoiZTIwNjc5MmI4MDMxMjIwNjNiY2ExZGQzN2E5YjlkMjA4NWVkMGI0YyIsImJ1aWxkdGltZSI6IjIwMTgtMTItMDlUMDE6NDY6MjJaIn0K"
+var versionString = "eyJ2ZXJzaW9uIjoidjAuOS4wIiwiY29tbWl0IjoiNWQyM2EzOGRjOTk0MjgwMWZjMTc3NjJlYzcwMWNhNThkZjI5OTk4ZSIsImJ1aWxkdGltZSI6IjIwMTktMDktMjlUMTg6MTI6NDRaIn0K"
 
 type versionInfo struct {
 	Version   string
@@ -27,6 +27,10 @@ func ShowVersion() error {
 	fmt.Printf("Go Version: %s\n", runtime.Version())
 	fmt.Printf("Built: %s\n", version.BuildTime.Local())
 	return nil
+}
+
+func Commit() string {
+	return version.Commit
 }
 
 func init() {

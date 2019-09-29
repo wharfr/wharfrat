@@ -9,6 +9,7 @@ import (
 
 type options struct {
 	Debug   bool `short:"d" long:"debug" description:"Show debug output"`
+	Env     `command:"env" description:"Manage wharfrat environment"`
 	Info    `command:"info" description:"Show information about current crate"`
 	List    `command:"list" description:"List existing containers"`
 	Login   `command:"login" description:"Cache credentials for a registry"`

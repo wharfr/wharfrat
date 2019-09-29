@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -59,17 +60,34 @@ func buildEnv(id string, crate *config.Crate) ([]string, error) {
 	}
 
 	blacklist := map[string]bool{
+		// Blacklist basic environment setup that shouldn't be inherited
 		"HOSTNAME": true,
 		"PATH":     true,
 		"SHELL":    true,
 		"HOST":     true,
 		"USER":     true,
 		"HOME":     true,
-		"PS0":      true,
-		"PS1":      true,
-		"PS2":      true,
-		"PS3":      true,
-		"PS4":      true,
+
+		// Blacklist prompt variables
+		"PS0": true,
+		"PS1": true,
+		"PS2": true,
+		"PS3": true,
+		"PS4": true,
+
+		// Blacklist VTE variables
+		"VTE_VERSION": true,
+
+		// Blacklist Konsole DBUS variables
+		"KONSOLE_DBUS_SESION":  true,
+		"KONSOLE_DBUS_WINDOW":  true,
+		"KONSOLE_DBUS_SERVICE": true,
+
+		// Blacklist desktop session variables
+		"DBUS_SESSION_BUS_ADDRESS": true,
+		"XDG_SESSION_PATH":         true,
+		"KDE_FULL_SESSION":         true,
+		"SESSION_MANAGER":          true,
 	}
 
 	for _, name := range crate.EnvWhitelist {
@@ -200,7 +218,12 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 			}
 			cmd = append(cmd, buf[:n]...)
 		}
+		cmd = bytes.TrimSpace(cmd)
 		log.Printf("READ: %s\n", cmd)
+
+		if string(cmd) != "PROXY READY" {
+			return -1, fmt.Errorf("Failed to get proxy ready, got: %s", cmd)
+		}
 
 		log.Printf("Initial Resize")
 		for resizeTty() != nil {
@@ -260,4 +283,82 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	}
 
 	return inspect.ExitCode, nil
+}
+
+func (c *Connection) GetOutput(id string, cmd []string, crate *config.Crate, user string) ([]byte, []byte, error) {
+	_, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if user == "" {
+		user = fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
+	}
+
+	log.Printf("GET OUTPUT (%s): %v", user, cmd)
+
+	env, err := buildEnv(id, crate)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	config := types.ExecConfig{
+		AttachStdin:  false,
+		AttachStdout: true,
+		AttachStderr: true,
+		Tty:          false,
+		Cmd:          cmd,
+		Env:          env,
+		User:         user,
+		WorkingDir:   "/",
+	}
+
+	resp, err := c.c.ContainerExecCreate(c.ctx, id, config)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	execID := resp.ID
+	if execID == "" {
+		return nil, nil, fmt.Errorf("Got empty exec ID")
+	}
+
+	log.Printf("EXEC: ID=%s", execID)
+
+	startCheck := types.ExecStartCheck{}
+	attach, err := c.c.ContainerExecAttach(c.ctx, execID, startCheck)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer attach.Close()
+
+	outChan := make(chan error)
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	go func() {
+		_, err := stdcopy.StdCopy(stdout, stderr, attach.Reader)
+		log.Printf("Copy done")
+		outChan <- err
+	}()
+
+	// Wait for copies to finish
+	if err = <-outChan; err != nil {
+		return nil, nil, fmt.Errorf("Error copying output: %s", err)
+	}
+
+	inspect, err := c.c.ContainerExecInspect(c.ctx, execID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Failed to get exec response: %s", err)
+	}
+
+	if inspect.Running {
+		return nil, nil, fmt.Errorf("Command still running!")
+	}
+
+	if inspect.ExitCode != 0 {
+		return nil, nil, fmt.Errorf("Command exited with status %d", inspect.ExitCode)
+	}
+
+	return stdout.Bytes(), stderr.Bytes(), nil
 }
