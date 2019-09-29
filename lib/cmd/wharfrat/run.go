@@ -8,6 +8,7 @@ import (
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
 	"wharfr.at/wharfrat/lib/environ"
+	"wharfr.at/wharfrat/lib/venv"
 )
 
 type Run struct {
@@ -101,6 +102,8 @@ func (opts *Run) client(args []string) (int, error) {
 	}
 
 	log.Printf("RETCODE: %d", ret)
+
+	venv.Update(c, container, crate, opts.User, opts.Workdir, args)
 
 	return ret, nil
 }

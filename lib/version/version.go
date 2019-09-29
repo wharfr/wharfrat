@@ -29,6 +29,10 @@ func ShowVersion() error {
 	return nil
 }
 
+func Commit() string {
+	return version.Commit
+}
+
 func init() {
 	verData, err := base64.StdEncoding.DecodeString(versionString)
 	if err != nil {

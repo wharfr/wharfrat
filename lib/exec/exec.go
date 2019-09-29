@@ -8,16 +8,18 @@ import (
 	"github.com/burntsushi/toml"
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
+	"wharfr.at/wharfrat/lib/venv"
 )
 
 type ExecCfg struct {
-	Args    []string `toml:"args"`
-	Command []string `toml:"command"`
-	Crate   string   `toml:"crate"`
-	Project string   `toml:"project"`
-	User    string   `toml:"user"`
-	path    string
-	meta    toml.MetaData
+	Args      []string `toml:"args"`
+	Command   []string `toml:"command"`
+	Crate     string   `toml:"crate"`
+	Project   string   `toml:"project"`
+	User      string   `toml:"user"`
+	AutoClean bool     `toml:"auto-clean"`
+	path      string
+	meta      toml.MetaData
 }
 
 func Parse(path string) (*ExecCfg, error) {
@@ -61,7 +63,7 @@ func (e *ExecCfg) Execute(args []string) (int, error) {
 		return 0, err
 	}
 	log.Printf("CRATE: %#v", crate)
-	container, err := client.EnsureRunning(crate, false, false)
+	container, err := client.EnsureRunning(crate, false, e.AutoClean)
 	if err != nil {
 		return 1, fmt.Errorf("Failed to run container: %s", err)
 	}
@@ -74,5 +76,12 @@ func (e *ExecCfg) Execute(args []string) (int, error) {
 		args = e.Args
 	}
 	cmd = append(cmd, args...)
-	return client.ExecCmd(container, cmd, crate, e.User, "")
+	ret, err := client.ExecCmd(container, cmd, crate, e.User, "")
+	if err != nil {
+		return -1, err
+	}
+
+	venv.Update(client, container, crate, e.User, "", cmd)
+
+	return ret, nil
 }

@@ -24,6 +24,14 @@ import (
 	"github.com/docker/go-connections/nat"
 )
 
+type CreatedFunc func(c *Connection, id string, crate *config.Crate)
+
+var created []CreatedFunc
+
+func AfterCreate(f CreatedFunc) {
+	created = append(created, f)
+}
+
 func getSelf() (*bytes.Buffer, error) {
 	self, err := os.Open("/proc/self/exe")
 	if err != nil {
@@ -234,6 +242,10 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	if err := c.setup(cid, crate); err != nil {
 		c.EnsureRemoved(crate.ContainerName())
 		return "", err
+	}
+
+	for _, f := range created {
+		f(c, cid, crate)
 	}
 
 	return cid, nil

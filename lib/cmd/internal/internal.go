@@ -13,6 +13,7 @@ type options struct {
 	Server   `command:"server"`
 	Setup    `command:"setup"`
 	Homedir  `command:"homedir"`
+	Search   `command:"search"`
 	Version  `command:"version"`
 	Debug    bool `short:"d" long:"debug" description:"Show debug output"`
 }

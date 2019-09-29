@@ -28,6 +28,7 @@ type Crate struct {
 	Env          map[string]string `toml:"env"`
 	EnvBlacklist []string          `toml:"env-blacklist"`
 	EnvWhitelist []string          `toml:"env-whitelist"`
+	ExportBin    []string          `toml:"export-bin"`
 	Groups       []string          `toml:"groups"`
 	Hostname     string            `toml:"hostname"`
 	Image        string            `toml:"image"`
@@ -42,9 +43,9 @@ type Crate struct {
 	Tmpfs        []string          `toml:"tmpfs"`
 	Volumes      []string          `toml:"volumes"`
 	WorkingDir   string            `toml:"working-dir"`
-	project      *Project
-	name         string
-	branch       string
+	project      *Project          `toml:"-"`
+	name         string            `toml:"-"`
+	branch       string            `toml:"-"`
 }
 
 const CrateNotFound = notFound("Crate Not Found")
