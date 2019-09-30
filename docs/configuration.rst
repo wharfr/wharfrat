@@ -37,6 +37,8 @@ default values (if the default is not empty):
 | mount-home    | bool             | should /home be mounted into container    |
 |               |                  | (default: true)                           |
 +---------------+------------------+-------------------------------------------+
+| network       | string           | the network to connect the container to   |
++---------------+------------------+-------------------------------------------+
 | ports         | array of strings | ports to be exposed from container (-p    |
 |               |                  | option to docker)                         |
 +---------------+------------------+-------------------------------------------+

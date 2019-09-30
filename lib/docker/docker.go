@@ -12,7 +12,6 @@ import (
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker/label"
 
-	"github.com/docker/docker/api"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
@@ -22,10 +21,6 @@ import (
 type Connection struct {
 	c   *client.Client
 	ctx context.Context
-}
-
-func Version() string {
-	return api.DefaultVersion
 }
 
 func Connect() (*Connection, error) {

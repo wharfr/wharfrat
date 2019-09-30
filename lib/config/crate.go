@@ -33,6 +33,7 @@ type Crate struct {
 	Hostname     string            `toml:"hostname"`
 	Image        string            `toml:"image"`
 	MountHome    bool              `toml:"mount-home"`
+	Network      string            `toml:"network"`
 	Ports        []string          `toml:"ports"`
 	ProjectMount string            `toml:"project-mount"`
 	SetupPost    string            `toml:"setup-post"`
