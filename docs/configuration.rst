@@ -34,6 +34,9 @@ default values (if the default is not empty):
 +---------------+------------------+-------------------------------------------+
 | image         | string           | name of image to create container from    |
 +---------------+------------------+-------------------------------------------+
+| image-cmd     | string           | a script to run to determine the image    |
+|               |                  | name (instead of using image).            |
++---------------+------------------+-------------------------------------------+
 | mount-home    | bool             | should /home be mounted into container    |
 |               |                  | (default: true)                           |
 +---------------+------------------+-------------------------------------------+
