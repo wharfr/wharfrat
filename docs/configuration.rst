@@ -42,6 +42,10 @@ default values (if the default is not empty):
 +---------------+------------------+-------------------------------------------+
 | network       | string           | the network to connect the container to   |
 +---------------+------------------+-------------------------------------------+
+| path-append   | array of strings | extra paths to add to end of PATH         |
++---------------+------------------+-------------------------------------------+
+| path-prepend  | array of strings | extra paths to add to beginning of PATH   |
++---------------+------------------+-------------------------------------------+
 | ports         | array of strings | ports to be exposed from container (-p    |
 |               |                  | option to docker)                         |
 +---------------+------------------+-------------------------------------------+
