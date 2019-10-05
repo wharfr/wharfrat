@@ -11,6 +11,7 @@ import (
 	"wharfr.at/wharfrat/lib/docker"
 	"wharfr.at/wharfrat/lib/docker/label"
 	"wharfr.at/wharfrat/lib/vc"
+	"wharfr.at/wharfrat/lib/version"
 )
 
 type List struct {
@@ -131,6 +132,7 @@ func (l *List) Execute(args []string) error {
 		crateName := container.Labels[label.Crate]
 		cfg := container.Labels[label.Config]
 		branch := container.Labels[label.Branch]
+		commit := container.Labels[label.Commit]
 
 		name := container.Names[0]
 		if strings.HasPrefix(name, "/") {
@@ -179,7 +181,7 @@ func (l *List) Execute(args []string) error {
 		crateState := green
 		if crate == nil {
 			crateState = red
-		} else if crate.Json() != cfg {
+		} else if crate.Json() != cfg || version.Commit() != commit {
 			crateState = amber
 		}
 

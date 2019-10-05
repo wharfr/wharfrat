@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"log"
 
+	"wharfr.at/wharfrat/lib/config"
+
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -24,6 +26,7 @@ func Main() int {
 	parser := flags.NewParser(&opts, flags.Default|flags.PassAfterNonOption)
 
 	parser.CommandHandler = func(cmd flags.Commander, args []string) error {
+		config.Debug = opts.Debug
 		if !opts.Debug {
 			log.SetOutput(ioutil.Discard)
 		}

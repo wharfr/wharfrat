@@ -64,14 +64,12 @@ func newState(path, project string, crates []string, c *docker.Connection) (*sta
 			return nil, fmt.Errorf("Config error: %s", err)
 		}
 		log.Printf("Crate: %#v", crate)
-		container, err := c.GetContainer(crate.ContainerName())
+		id, err := c.EnsureRunning(crate, false, true)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to get docker container: %s", err)
+			return nil, fmt.Errorf("Failed to get running container: %s", err)
 		}
-		if container != nil {
-			if err := s.Update(c, container.ID, crate, "", "", nil); err != nil {
-				return nil, fmt.Errorf("failed to update exported binaries: %s", err)
-			}
+		if err := s.Update(c, id, crate, "", "", nil); err != nil {
+			return nil, fmt.Errorf("failed to update exported binaries: %s", err)
 		}
 	}
 	return s, nil

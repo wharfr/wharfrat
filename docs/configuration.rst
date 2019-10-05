@@ -34,10 +34,17 @@ default values (if the default is not empty):
 +---------------+------------------+-------------------------------------------+
 | image         | string           | name of image to create container from    |
 +---------------+------------------+-------------------------------------------+
+| image-cmd     | string           | a script to run to determine the image    |
+|               |                  | name (instead of using image).            |
++---------------+------------------+-------------------------------------------+
 | mount-home    | bool             | should /home be mounted into container    |
 |               |                  | (default: true)                           |
 +---------------+------------------+-------------------------------------------+
 | network       | string           | the network to connect the container to   |
++---------------+------------------+-------------------------------------------+
+| path-append   | array of strings | extra paths to add to end of PATH         |
++---------------+------------------+-------------------------------------------+
+| path-prepend  | array of strings | extra paths to add to beginning of PATH   |
 +---------------+------------------+-------------------------------------------+
 | ports         | array of strings | ports to be exposed from container (-p    |
 |               |                  | option to docker)                         |
