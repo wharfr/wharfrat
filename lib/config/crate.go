@@ -105,6 +105,7 @@ func GetCrate(start, name string, ls LabelSource) (*Crate, error) {
 }
 
 func runImageCmd(command string, projectDir string) (string, error) {
+	command = strings.TrimSpace(command)
 	shell := []string{"sh"}
 	if strings.HasPrefix(command, "#!") {
 		hashBang := strings.Split(command, "\n")[0]
@@ -115,6 +116,9 @@ func runImageCmd(command string, projectDir string) (string, error) {
 	cmd.Stdin = strings.NewReader(command)
 	cmd.Stdout = buf
 	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ(),
+		"WHARFRAT_PROJECT_DIR=" + projectDir,
+	)
 	if err := cmd.Run(); err != nil {
 		return "", err
 	}
