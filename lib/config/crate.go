@@ -284,3 +284,18 @@ func (c *Crate) Hash() string {
 	}
 	return hex.EncodeToString(h.Sum(nil))
 }
+
+func (c *Crate) Getenvish(name string) string {
+	switch name {
+	case "WHARFRAT_NAME":
+		return c.ContainerName()
+	case "WHARFRAT_CRATE":
+		return c.Name()
+	case "WHARFRAT_PROJECT":
+		return c.ProjectPath()
+	case "WHARFRAT_PROJECT_DIR":
+		return filepath.Dir(c.ProjectPath())
+	default:
+		return os.Getenv(name)
+	}
+}
