@@ -176,7 +176,9 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	if crate.Volumes != nil {
-		binds = append(binds, crate.Volumes...)
+		for _, volume := range crate.Volumes {
+			binds = append(binds, os.Expand(volume, crate.Getenvish))
+		}
 	}
 
 	log.Printf("BINDS: %v", binds)

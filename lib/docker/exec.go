@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -30,12 +31,13 @@ func buildEnv(id string, crate *config.Crate) ([]string, error) {
 		"WHARFRAT_NAME=" + crate.ContainerName(),
 		"WHARFRAT_CRATE=" + crate.Name(),
 		"WHARFRAT_PROJECT=" + crate.ProjectPath(),
+		"WHARFRAT_PROJECT_DIR=" + filepath.Dir(crate.ProjectPath()),
 	}
 
 	log.Printf("CRATE ENV: %v", crate.Env)
 	for name, value := range crate.Env {
 		switch name {
-		case "WHARFRAT_ID", "WHARFRAT_NAME", "WHARFRAT_CRATE", "WHARFRAT_PROJECT":
+		case "WHARFRAT_ID", "WHARFRAT_NAME", "WHARFRAT_CRATE", "WHARFRAT_PROJECT", "WHARFRAT_PROJECT_DIR":
 			log.Printf("Ignoring attempt to change %s", name)
 		default:
 			env = append(env, name+"="+value)
@@ -51,7 +53,7 @@ func buildEnv(id string, crate *config.Crate) ([]string, error) {
 		log.Printf("LOCAL ENV: %v", local.Env)
 		for name, value := range local.Env {
 			switch name {
-			case "WHARFRAT_ID", "WHARFRAT_NAME", "WHARFRAT_CRATE", "WHARFRAT_PROJECT":
+			case "WHARFRAT_ID", "WHARFRAT_NAME", "WHARFRAT_CRATE", "WHARFRAT_PROJECT", "WHARFRAT_PROJECT_DIR":
 				log.Printf("Ignoring attempt to change %s", name)
 			default:
 				env = append(env, name+"="+value)
