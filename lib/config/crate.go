@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"strings"
 
 	"wharfr.at/wharfrat/lib/docker/label"
+	"wharfr.at/wharfrat/lib/output"
 	"wharfr.at/wharfrat/lib/vc"
 )
 
@@ -22,9 +24,17 @@ type LabelSource interface {
 	ImageLabels(name string) (map[string]string, error)
 }
 
-type Replace struct {
-	Match   string `toml:"match"`
-	Replace string `toml:"replace"`
+type Replace map[string]string
+
+func (r Replace) Rewrite(cmd string, w io.Writer, mapping func(string) string) io.Writer {
+	out := w
+	for match, replace := range r {
+		match := os.Expand(match, mapping)
+		replace := os.Expand(replace, mapping)
+		log.Printf("REPLACE (%s): %s -> %s", cmd, match, replace)
+		out = output.NewRewriter(out, []byte(match), []byte(replace))
+	}
+	return out
 }
 
 type Crate struct {

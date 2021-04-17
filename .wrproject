@@ -18,8 +18,7 @@ default = "dev"
   """
 
 [crates.dev.cmd-replace.go]
-  match = "/usr/local/go"
-  replace = "${WHARFRAT_PROJECT_DIR}/.wrenv"
+  "/usr/local/go" = "${WHARFRAT_PROJECT_DIR}/.wrenv"
 
 [crates.docs]
   image = "wharfr/docs"

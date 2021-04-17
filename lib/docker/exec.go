@@ -12,7 +12,6 @@ import (
 	"syscall"
 
 	"wharfr.at/wharfrat/lib/config"
-	"wharfr.at/wharfrat/lib/output"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/versions"
@@ -139,19 +138,13 @@ func wrGetenv(id string, crate *config.Crate) func(string) string {
 func rewrite(cmd string, out io.Writer, id string, crate *config.Crate) io.Writer {
 	getenv := wrGetenv(id, crate)
 
-	if cfg, found := crate.CmdReplace[cmd]; found {
-		match := os.Expand(cfg.Match, getenv)
-		replace := os.Expand(cfg.Replace, getenv)
-		log.Printf("REPLACE (%s): %s -> %s", cmd, match, replace)
-		return output.NewRewriter(out, []byte(match), []byte(replace))
+	if replace, found := crate.CmdReplace[cmd]; found {
+		return replace.Rewrite(cmd, out, getenv)
 	}
 
 	binary := filepath.Base(cmd)
-	if cfg, found := crate.CmdReplace[binary]; found {
-		match := os.Expand(cfg.Match, getenv)
-		replace := os.Expand(cfg.Replace, getenv)
-		log.Printf("REPLACE (%s): %s -> %s", binary, match, replace)
-		return output.NewRewriter(out, []byte(match), []byte(replace))
+	if replace, found := crate.CmdReplace[binary]; found {
+		return replace.Rewrite(binary, out, getenv)
 	}
 
 	return out
