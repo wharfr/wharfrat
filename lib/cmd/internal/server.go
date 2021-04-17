@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
 
 	"golang.org/x/sys/unix"
+
+	"wharfr.at/wharfrat/lib/version"
 )
 
 type Server struct {
@@ -19,18 +20,18 @@ func (s *Server) Execute(args []string) error {
 		return fmt.Errorf("Failed to change wr-init permissions: %w", err)
 	}
 
-	child := make(chan os.Signal, 1)
-	signal.Notify(child, unix.SIGCHLD)
+	version.ShowVersion()
 
+	status := unix.WaitStatus(0)
+	usage := unix.Rusage{}
 	for {
-		select {
-		case <-child:
-			status := unix.WaitStatus(0)
-			usage := unix.Rusage{}
-			pid, err := unix.Wait4(-1, &status, 0, &usage)
-			log.Printf("REAP: %d - %s", pid, err)
-			log.Printf("  STATUS: %d", status)
-			log.Printf("  USAGE: %#v", usage)
+		pid, err := unix.Wait4(-1, &status, 0, &usage)
+		if err != nil {
+			log.Printf("WAIT4 FAILED: %s", err)
+			continue
 		}
+		log.Printf("REAP: %d - %s", pid, err)
+		log.Printf("  STATUS: %d", status)
+		log.Printf("  USAGE: %#v", usage)
 	}
 }
