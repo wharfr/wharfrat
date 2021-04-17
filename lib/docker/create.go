@@ -244,13 +244,19 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 	cid := create.ID
 
+	log.Printf("CREATE COMPLETE: %s", cid)
+
 	if err := c.c.CopyToContainer(c.ctx, cid, "/", self, types.CopyToContainerOptions{}); err != nil {
 		return "", err
 	}
 
+	log.Printf("SELF COPIED: %s", cid)
+
 	if err := c.c.ContainerStart(c.ctx, cid, types.ContainerStartOptions{}); err != nil {
 		return "", err
 	}
+
+	log.Printf("STARTED: %s", cid)
 
 	if err := c.setup(cid, crate); err != nil {
 		c.EnsureRemoved(crate.ContainerName())
@@ -260,6 +266,8 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	for _, f := range created {
 		f(c, cid, crate)
 	}
+
+	log.Printf("CREATE COMPLETE: %s", cid)
 
 	return cid, nil
 }

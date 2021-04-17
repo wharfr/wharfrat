@@ -40,7 +40,7 @@ func (c *Connection) setupUser(id string, crate *config.Crate, usr *user.User, g
 
 	buf := &bytes.Buffer{}
 
-	exitCode, err := c.run(id, cmd, nil, nil, nil, buf)
+	exitCode, err := c.run(id, cmd, nil, nil, buf, buf)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (c *Connection) setupUser(id string, crate *config.Crate, usr *user.User, g
 	log.Printf("Setup stderr: %s", buf)
 
 	if exitCode != 0 {
-		return fmt.Errorf("Setup command failed (%d): %s", exitCode, buf)
+		return fmt.Errorf("Setup user command failed (%d): %s", exitCode, buf)
 	}
 
 	return nil
