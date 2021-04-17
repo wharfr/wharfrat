@@ -40,7 +40,7 @@ func (s *Server) Execute(args []string) error {
 				if pid == 0 {
 					break
 				}
-				log.Printf("REAP: %d - %s", pid, err)
+				log.Printf("REAP: %d", pid)
 				log.Printf("  STATUS: %d", status)
 				log.Printf("  USAGE: %#v", usage)
 			}
