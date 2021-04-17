@@ -3,13 +3,17 @@
         "DBUS",
         "Gname",
         "KONSOLE",
+        "Undecoded",
         "Unpause",
         "cmds",
+        "mattn",
         "mkhome",
         "resp",
         "sbin",
+        "shibukawa",
         "tmpfs",
         "wharfr",
-        "workdir"
+        "workdir",
+        "wrcrate"
     ]
 }

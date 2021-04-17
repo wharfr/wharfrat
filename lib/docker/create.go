@@ -173,13 +173,13 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	if crate.ProjectMount != "" {
-		pdir := filepath.Dir(crate.ProjectPath())
-		binds = append(binds, pdir+":"+crate.ProjectMount)
+		pDir := filepath.Dir(crate.ProjectPath())
+		binds = append(binds, pDir+":"+crate.ProjectMount)
 	}
 
 	if crate.Volumes != nil {
 		for _, volume := range crate.Volumes {
-			binds = append(binds, os.Expand(volume, crate.Getenvish))
+			binds = append(binds, os.Expand(volume, crate.Getenv))
 		}
 	}
 

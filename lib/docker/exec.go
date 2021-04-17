@@ -17,7 +17,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/docker/docker/pkg/term"
+	"github.com/moby/term"
 )
 
 // buildEnv constructs the environment that we want to use inside the container.
@@ -340,7 +340,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	}
 
 	if inspect.Running {
-		return -1, fmt.Errorf("command still running!")
+		return -1, fmt.Errorf("command still running")
 	}
 
 	return inspect.ExitCode, nil
@@ -414,7 +414,7 @@ func (c *Connection) GetOutput(id string, cmd []string, crate *config.Crate, use
 	}
 
 	if inspect.Running {
-		return nil, nil, fmt.Errorf("command still running!")
+		return nil, nil, fmt.Errorf("command still running")
 	}
 
 	if inspect.ExitCode != 0 {

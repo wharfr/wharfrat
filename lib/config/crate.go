@@ -81,7 +81,7 @@ func LocateCrate(start string) (string, error) {
 func GetCrate(start, name string, ls LabelSource) (*Crate, error) {
 	project, err := LocateProject(start)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse project file: %s", err)
+		return nil, fmt.Errorf("failed to parse project file: %w", err)
 	}
 	log.Printf("Project: %#v", project)
 
@@ -89,7 +89,7 @@ func GetCrate(start, name string, ls LabelSource) (*Crate, error) {
 	if crateName == "" {
 		crateName, err = LocateCrate(start)
 		if err != nil && err != NotFound {
-			return nil, fmt.Errorf("Failed to parse crate file: %s", err)
+			return nil, fmt.Errorf("failed to parse crate file: %w", err)
 		}
 	}
 
@@ -291,7 +291,7 @@ func (c *Crate) Hash() string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func (c *Crate) Getenvish(name string) string {
+func (c *Crate) Getenv(name string) string {
 	switch name {
 	case "WHARFRAT_NAME":
 		return c.ContainerName()

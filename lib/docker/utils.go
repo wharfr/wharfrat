@@ -13,8 +13,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/docker/docker/pkg/term"
 	"github.com/docker/docker/registry"
+	"github.com/moby/term"
 )
 
 func (c *Connection) run(id string, cmd []string, env map[string]string, stdin io.Reader, stdout, stderr io.Writer) (int, error) {
