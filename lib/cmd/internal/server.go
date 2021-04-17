@@ -18,7 +18,7 @@ func (s *Server) Execute(args []string) error {
 	log.Printf("Server Args: %#v, Opts: %#v", args, s)
 
 	if err := os.Chmod("/sbin/wr-init", os.ModeSetuid|0755); err != nil {
-		return fmt.Errorf("Failed to change wr-init permissions: %w", err)
+		return fmt.Errorf("failed to change wr-init permissions: %w", err)
 	}
 
 	version.ShowVersion()

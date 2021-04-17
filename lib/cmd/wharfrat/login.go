@@ -9,8 +9,8 @@ import (
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
 
-	"github.com/docker/docker/pkg/term"
 	"github.com/docker/docker/registry"
+	"github.com/moby/term"
 )
 
 type Login struct {
@@ -69,7 +69,7 @@ func (l *Login) Execute(args []string) error {
 	log.Printf("LOGIN: %s", server)
 
 	if server == "" {
-		return fmt.Errorf("Server required")
+		return fmt.Errorf("server required")
 	}
 
 	username := l.User
@@ -78,7 +78,7 @@ func (l *Login) Execute(args []string) error {
 	_, inTerm := term.GetFdInfo(os.Stdin)
 
 	if password == "" && !inTerm {
-		return fmt.Errorf("Unable to request password without terminal")
+		return fmt.Errorf("unable to request password without terminal")
 	}
 
 	if username == "" {
@@ -90,11 +90,11 @@ func (l *Login) Execute(args []string) error {
 	}
 
 	if username == "" {
-		return fmt.Errorf("Username required")
+		return fmt.Errorf("username required")
 	}
 
 	if password == "" {
-		return fmt.Errorf("Password required")
+		return fmt.Errorf("password required")
 	}
 
 	log.Printf("LOGIN: user=%s, server=%s", username, server)

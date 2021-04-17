@@ -38,14 +38,11 @@ func (p *Prune) Execute(args []string) error {
 		crateName := container.Labels[label.Crate]
 		branch := container.Labels[label.Branch]
 
-		name := container.Names[0]
-		if strings.HasPrefix(name, "/") {
-			name = name[1:]
-		}
+		name := strings.TrimPrefix(container.Names[0], "/")
 		project := filepath.Dir(projectFile)
 		crate, err := config.OpenCrate(projectFile, crateName, client)
 		if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
-			return fmt.Errorf("Failed to lookup crate: %s", err)
+			return fmt.Errorf("failed to lookup crate: %w", err)
 		}
 
 		projectBranch, err := vc.Branch(project)
@@ -61,7 +58,7 @@ func (p *Prune) Execute(args []string) error {
 				log.Printf("OpenVcCrate: %s %s %s", projectFile, branch, crateName)
 				crate, err = config.OpenVcCrate(projectFile, branch, crateName, client)
 				if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
-					return fmt.Errorf("Failed to lookup crate: %s", err)
+					return fmt.Errorf("failed to lookup crate: %w", err)
 				}
 			}
 		}

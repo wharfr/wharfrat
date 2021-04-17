@@ -8,17 +8,6 @@ import (
 	"strings"
 )
 
-func exists(path string) bool {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true
-	}
-	if os.IsNotExist(err) {
-		return false
-	}
-	panic(err)
-}
-
 type Setup struct {
 	User   string   `short:"u" long:"user" value-name:"USER"`
 	Uid    string   `short:"U" long:"uid" value-name:"UID" default:"1000"`
@@ -189,19 +178,19 @@ func (s *Setup) Execute(args []string) error {
 
 	for _, entry := range s.Create {
 		if err := s.create_group(entry); err != nil {
-			return fmt.Errorf("Failed to create group: %s", err)
+			return fmt.Errorf("failed to create group: %w", err)
 		}
 	}
 
 	if s.Group != "" {
 		if err := s.setup_group(); err != nil {
-			return fmt.Errorf("Failed to setup group: %s", err)
+			return fmt.Errorf("failed to setup group: %w", err)
 		}
 	}
 
 	if s.User != "" {
 		if err := s.setup_user(); err != nil {
-			return fmt.Errorf("Failed to setup user: %s", err)
+			return fmt.Errorf("failed to setup user: %w", err)
 		}
 	}
 

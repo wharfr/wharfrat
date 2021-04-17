@@ -9,9 +9,9 @@ import (
 )
 
 type Env struct {
-	EnvCreate  `command:"create" description:"Create a new environment"`
-	EnvUpdate  `command:"update" description:"Update the local wharfrat in the environment"`
-	EnvInfo    `command:"info" description:"Display information about the current environment"`
+	EnvCreate `command:"create" description:"Create a new environment"`
+	EnvUpdate `command:"update" description:"Update the local wharfrat in the environment"`
+	EnvInfo   `command:"info" description:"Display information about the current environment"`
 }
 
 func (e *Env) Usage() string {
@@ -36,7 +36,7 @@ func (ec *EnvCreate) Execute(args []string) error {
 
 	c, err := docker.Connect()
 	if err != nil {
-		return fmt.Errorf("Failed to create docker client: %s", err)
+		return fmt.Errorf("failed to create docker client: %w", err)
 	}
 	defer c.Close()
 
@@ -53,7 +53,7 @@ func (eu *EnvUpdate) Execute(args []string) error {
 	return venv.UpdateWharfrat(eu.Force)
 }
 
-type EnvInfo struct {}
+type EnvInfo struct{}
 
 func (ei *EnvInfo) Execute(args []string) error {
 	venv.DisplayInfo()

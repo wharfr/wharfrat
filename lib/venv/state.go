@@ -59,17 +59,17 @@ func newState(path, project string, crates []string, c *docker.Connection) (*sta
 	for _, name := range crates {
 		crate, err := config.GetCrate(".", name, c)
 		if err == config.CrateNotFound {
-			return nil, fmt.Errorf("Unknown crate: %s", crate)
+			return nil, fmt.Errorf("unknown crate: %s", name)
 		} else if err != nil {
-			return nil, fmt.Errorf("Config error: %s", err)
+			return nil, fmt.Errorf("config error: %w", err)
 		}
 		log.Printf("Crate: %#v", crate)
 		id, err := c.EnsureRunning(crate, false, true)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to get running container: %s", err)
+			return nil, fmt.Errorf("failed to get running container: %w", err)
 		}
 		if err := s.Update(c, id, crate, "", "", nil); err != nil {
-			return nil, fmt.Errorf("failed to update exported binaries: %s", err)
+			return nil, fmt.Errorf("failed to update exported binaries: %w", err)
 		}
 	}
 	return s, nil
@@ -139,7 +139,7 @@ func (s *state) createBinary(crate, path string) error {
 	return nil
 }
 
-func (s *state) exportBinaries(crate string, cmd []string, user, workdir string, paths[]string) error {
+func (s *state) exportBinaries(crate string, cmd []string, user, workdir string, paths []string) error {
 	log.Printf("EXPORT: %s %s", cmd, paths)
 	for _, path := range paths {
 		if err := s.createBinary(crate, path); err != nil {
@@ -180,13 +180,13 @@ func (s *state) restoreItem(c *docker.Connection, id string, crate *config.Crate
 	log.Printf("RESTORE: %s %s", bin.Command, delta)
 	ret, err := c.ExecCmd(id, bin.Command, crate, bin.User, bin.Workdir)
 	if err != nil {
-		return fmt.Errorf("Failed to exec command (%s): %s", bin.Command, err)
+		return fmt.Errorf("failed to exec command (%s): %w", bin.Command, err)
 	}
 	if ret != 0 {
-		return fmt.Errorf("Running command (%s) failed", bin.Command)
+		return fmt.Errorf("running command (%s) failed", bin.Command)
 	}
 	if err := s.Update(c, id, crate, bin.User, bin.Workdir, bin.Command); err != nil {
-		return fmt.Errorf("Failed to update exported binaries: %s", err)
+		return fmt.Errorf("failed to update exported binaries: %w", err)
 	}
 	return nil
 }
