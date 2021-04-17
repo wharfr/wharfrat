@@ -6,6 +6,7 @@ default = "dev"
   project-mount = "/go/src/wharfr.at/wharfrat"
   working-dir = "project, match"
   env-blacklist = ["GOPATH"]
+  volumes = ["/tmp:/tmp"]
   shell = "/bin/sh"
   export-bin = [
     "/usr/local/go/bin/*",
