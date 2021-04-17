@@ -16,6 +16,10 @@ default = "dev"
     chown -R "${WR_EXT_USER}:${WR_EXT_GROUP}" /go/bin /go/pkg
   """
 
+[crates.dev.cmd-replace.go]
+  match = "/usr/local/go"
+  replace = "${WHARFRAT_PROJECT_DIR}/.wrenv"
+
 [crates.docs]
   image = "wharfr/docs"
   mount-home = false

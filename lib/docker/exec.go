@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/output"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/versions"
@@ -109,6 +110,53 @@ func buildEnv(id string, crate *config.Crate) ([]string, error) {
 	return env, nil
 }
 
+func wrGetenv(id string, crate *config.Crate) func(string) string {
+	return func(key string) string {
+		if strings.HasPrefix(key, "WHARFRAT_") {
+			switch key {
+			case "WHARFRAT_ID":
+				return id
+			case "WHARFRAT_NAME":
+				return crate.ContainerName()
+			case "WHARFRAT_CRATE":
+				return crate.Name()
+			case "WHARFRAT_PROJECT":
+				return crate.ProjectPath()
+			case "WHARFRAT_PROJECT_DIR":
+				return filepath.Dir(crate.ProjectPath())
+			default:
+				log.Printf("wrGetenv: unknown WHARFRAT_ variable: %s", key)
+				return ""
+			}
+		}
+		if value, found := crate.Env[key]; found {
+			return value
+		}
+		return os.Getenv(key)
+	}
+}
+
+func rewrite(cmd string, out io.Writer, id string, crate *config.Crate) io.Writer {
+	getenv := wrGetenv(id, crate)
+
+	if cfg, found := crate.CmdReplace[cmd]; found {
+		match := os.Expand(cfg.Match, getenv)
+		replace := os.Expand(cfg.Replace, getenv)
+		log.Printf("REPLACE (%s): %s -> %s", cmd, match, replace)
+		return output.NewRewriter(out, []byte(match), []byte(replace))
+	}
+
+	binary := filepath.Base(cmd)
+	if cfg, found := crate.CmdReplace[binary]; found {
+		match := os.Expand(cfg.Match, getenv)
+		replace := os.Expand(cfg.Replace, getenv)
+		log.Printf("REPLACE (%s): %s -> %s", binary, match, replace)
+		return output.NewRewriter(out, []byte(match), []byte(replace))
+	}
+
+	return out
+}
+
 func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user, workdir string) (int, error) {
 	container, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
 	if err != nil {
@@ -201,6 +249,8 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 
 	outChan := make(chan error)
 
+	stdout := rewrite(cmd[0], os.Stdout, id, crate)
+
 	if config.Tty {
 		resizeTty := func() error {
 			size, err := term.GetWinsize(inFd)
@@ -263,12 +313,12 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		attach.Conn.Write([]byte("PROXY RUN\n"))
 
 		go func() {
-			_, err := io.Copy(os.Stdout, attach.Reader)
+			_, err := io.Copy(stdout, attach.Reader)
 			outChan <- err
 		}()
 	} else {
 		go func() {
-			_, err := stdcopy.StdCopy(os.Stdout, os.Stderr, attach.Reader)
+			_, err := stdcopy.StdCopy(stdout, os.Stderr, attach.Reader)
 			log.Printf("Copy done")
 			outChan <- err
 		}()

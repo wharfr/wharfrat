@@ -22,35 +22,41 @@ type LabelSource interface {
 	ImageLabels(name string) (map[string]string, error)
 }
 
+type Replace struct {
+	Match   string `toml:"match"`
+	Replace string `toml:"replace"`
+}
+
 type Crate struct {
-	CapAdd       []string          `toml:"cap-add"`
-	CapDrop      []string          `toml:"cap-drop"`
-	CopyGroups   []string          `toml:"copy-groups"`
-	Env          map[string]string `toml:"env"`
-	EnvBlacklist []string          `toml:"env-blacklist"`
-	EnvWhitelist []string          `toml:"env-whitelist"`
-	ExportBin    []string          `toml:"export-bin"`
-	Groups       []string          `toml:"groups"`
-	Hostname     string            `toml:"hostname"`
-	Image        string            `toml:"image"`
-	ImageCmd     string            `toml:"image-cmd"`
-	MountHome    bool              `toml:"mount-home"`
-	Network      string            `toml:"network"`
-	PathAppend   []string          `toml:"path-append"`
-	PathPrepend  []string          `toml:"path-prepend"`
-	Ports        []string          `toml:"ports"`
-	ProjectMount string            `toml:"project-mount"`
-	SetupPost    string            `toml:"setup-post"`
-	SetupPre     string            `toml:"setup-pre"`
-	SetupPrep    string            `toml:"setup-prep"`
-	Shell        string            `toml:"shell"`
-	Tarballs     map[string]string `toml:"tarballs"`
-	Tmpfs        []string          `toml:"tmpfs"`
-	Volumes      []string          `toml:"volumes"`
-	WorkingDir   string            `toml:"working-dir"`
-	project      *Project          `toml:"-"`
-	name         string            `toml:"-"`
-	branch       string            `toml:"-"`
+	CapAdd       []string           `toml:"cap-add"`
+	CapDrop      []string           `toml:"cap-drop"`
+	CopyGroups   []string           `toml:"copy-groups"`
+	CmdReplace   map[string]Replace `toml:"cmd-replace"`
+	Env          map[string]string  `toml:"env"`
+	EnvBlacklist []string           `toml:"env-blacklist"`
+	EnvWhitelist []string           `toml:"env-whitelist"`
+	ExportBin    []string           `toml:"export-bin"`
+	Groups       []string           `toml:"groups"`
+	Hostname     string             `toml:"hostname"`
+	Image        string             `toml:"image"`
+	ImageCmd     string             `toml:"image-cmd"`
+	MountHome    bool               `toml:"mount-home"`
+	Network      string             `toml:"network"`
+	PathAppend   []string           `toml:"path-append"`
+	PathPrepend  []string           `toml:"path-prepend"`
+	Ports        []string           `toml:"ports"`
+	ProjectMount string             `toml:"project-mount"`
+	SetupPost    string             `toml:"setup-post"`
+	SetupPre     string             `toml:"setup-pre"`
+	SetupPrep    string             `toml:"setup-prep"`
+	Shell        string             `toml:"shell"`
+	Tarballs     map[string]string  `toml:"tarballs"`
+	Tmpfs        []string           `toml:"tmpfs"`
+	Volumes      []string           `toml:"volumes"`
+	WorkingDir   string             `toml:"working-dir"`
+	project      *Project           `toml:"-"`
+	name         string             `toml:"-"`
+	branch       string             `toml:"-"`
 }
 
 const CrateNotFound = notFound("Crate Not Found")
@@ -117,7 +123,7 @@ func runImageCmd(command string, projectDir string) (string, error) {
 	cmd.Stdout = buf
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(),
-		"WHARFRAT_PROJECT_DIR=" + projectDir,
+		"WHARFRAT_PROJECT_DIR="+projectDir,
 	)
 	if err := cmd.Run(); err != nil {
 		return "", err
