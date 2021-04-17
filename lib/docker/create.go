@@ -14,8 +14,8 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker/label"
-	"wharfr.at/wharfrat/lib/version"
 	"wharfr.at/wharfrat/lib/vc"
+	"wharfr.at/wharfrat/lib/version"
 
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
@@ -23,6 +23,8 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type CreatedFunc func(c *Connection, id string, crate *config.Crate)
@@ -199,6 +201,12 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	networkingConfig := &network.NetworkingConfig{}
 
+	// TODO: hard code the platform for now ...
+	platform := &specs.Platform{
+		Architecture: "amd64",
+		OS:           "linux",
+	}
+
 	var namedRef reference.Named
 
 	ref, err := reference.ParseAnyReference(config.Image)
@@ -211,7 +219,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	log.Printf("IMAGE: %s %s %s", config.Image, namedRef, reference.FamiliarString(namedRef))
 
-	create, err := c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, crate.ContainerName())
+	create, err := c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, platform, crate.ContainerName())
 	if client.IsErrNotFound(err) && namedRef != nil {
 		fmt.Fprintf(os.Stderr, "Unable to find image '%s' locally\n", reference.FamiliarString(namedRef))
 
@@ -227,7 +235,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		labels[label.Config] = crate.Json()
 
 		var retryErr error
-		create, retryErr = c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, crate.ContainerName())
+		create, retryErr = c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, platform, crate.ContainerName())
 		if retryErr != nil {
 			return "", retryErr
 		}

@@ -25,7 +25,7 @@ type Connection struct {
 
 func Connect() (*Connection, error) {
 	host := config.Local().DockerURL
-	opts := []func(*client.Client) error{}
+	opts := []client.Opt{}
 	if host != "" {
 		opts = append(opts, client.WithHost(host))
 	}
