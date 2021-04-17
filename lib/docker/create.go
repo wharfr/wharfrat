@@ -38,12 +38,12 @@ func AfterCreate(f CreatedFunc) {
 func getSelf() (*bytes.Buffer, error) {
 	self, err := os.Open("/proc/self/exe")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get self: %s", err)
+		return nil, fmt.Errorf("failed to get self: %w", err)
 	}
 	defer self.Close()
 	selfData, err := ioutil.ReadAll(self)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read self: %s", err)
+		return nil, fmt.Errorf("failed to read self: %w", err)
 	}
 
 	initHdr := &tar.Header{
@@ -88,21 +88,21 @@ func getSelf() (*bytes.Buffer, error) {
 	defer w.Close()
 
 	if err := w.WriteHeader(initHdr); err != nil {
-		return nil, fmt.Errorf("Failed to build self archive (init header): %s", err)
+		return nil, fmt.Errorf("failed to build self archive (init header): %w", err)
 	}
 	if _, err := w.Write(selfData); err != nil {
-		return nil, fmt.Errorf("Failed to build self archive (init data): %s", err)
+		return nil, fmt.Errorf("failed to build self archive (init data): %w", err)
 	}
 
 	if err := w.WriteHeader(wharfratHdr); err != nil {
-		return nil, fmt.Errorf("Failed to build self archive (wharfrat header): %s", err)
+		return nil, fmt.Errorf("failed to build self archive (wharfrat header): %w", err)
 	}
 	if _, err := w.Write(selfData); err != nil {
-		return nil, fmt.Errorf("Failed to build self archive (wharfrat data): %s", err)
+		return nil, fmt.Errorf("failed to build self archive (wharfrat data): %w", err)
 	}
 
 	if err := w.WriteHeader(wrHdr); err != nil {
-		return nil, fmt.Errorf("Failed to build self archive (wr header): %s", err)
+		return nil, fmt.Errorf("failed to build self archive (wr header): %w", err)
 	}
 
 	return buf, nil
@@ -115,12 +115,12 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	// }
 	self, err := getSelf()
 	if err != nil {
-		return "", fmt.Errorf("Failed to get self: %s", err)
+		return "", fmt.Errorf("failed to get self: %w", err)
 	}
 
 	usr, err := user.Current()
 	if err != nil {
-		return "", fmt.Errorf("Failed to get user information: %s", err)
+		return "", fmt.Errorf("failed to get user information: %w", err)
 	}
 
 	labels := map[string]string{

@@ -12,14 +12,14 @@ import (
 func (c *Connection) EnsureRunning(crate *config.Crate, force, removeOld bool) (string, error) {
 	container, err := c.GetContainer(crate.ContainerName())
 	if err != nil {
-		return "", fmt.Errorf("Failed to get docker container: %s", err)
+		return "", fmt.Errorf("failed to get docker container: %w", err)
 	}
 
 	if container == nil {
 		return c.Create(crate)
 	}
 
-	log.Printf("FOUND %s %s", container.ID, container.State)
+	log.Printf("FOUND %s %s", container.ID, container.State.Status)
 
 	oldCommit := container.Config.Labels[label.Commit]
 	oldJson := container.Config.Labels[label.Config]
@@ -33,7 +33,7 @@ func (c *Connection) EnsureRunning(crate *config.Crate, force, removeOld bool) (
 			}
 			return c.Create(crate)
 		} else {
-			return "", fmt.Errorf("Container built from old config")
+			return "", fmt.Errorf("container built from old config")
 		}
 	}
 
@@ -53,31 +53,31 @@ func (c *Connection) EnsureRunning(crate *config.Crate, force, removeOld bool) (
 			}
 			return c.Create(crate)
 		} else {
-			return "", fmt.Errorf("Container built from wrong (old?) image")
+			return "", fmt.Errorf("container built from wrong (old?) image")
 		}
 	}
 
 	switch container.State.Status {
 	case "created":
-		return "", fmt.Errorf("State %s NOT IMPLEMENTED", container.State)
+		return "", fmt.Errorf("state %s NOT IMPLEMENTED", container.State.Status)
 	case "running":
 		log.Printf("RUNNING")
 	case "paused":
 		if err := c.Unpause(container.ID); err != nil {
-			return "", fmt.Errorf("Failed to start container: %s", err)
+			return "", fmt.Errorf("failed to start container: %w", err)
 		}
 	case "restarting":
-		return "", fmt.Errorf("State %s NOT IMPLEMENTED", container.State)
+		return "", fmt.Errorf("state %s NOT IMPLEMENTED", container.State.Status)
 	case "removing":
-		return "", fmt.Errorf("State %s NOT IMPLEMENTED", container.State)
+		return "", fmt.Errorf("state %s NOT IMPLEMENTED", container.State.Status)
 	case "exited":
 		if err := c.Start(container.ID); err != nil {
-			return "", fmt.Errorf("Failed to start container: %s", err)
+			return "", fmt.Errorf("failed to start container: %w", err)
 		}
 	case "dead":
-		return "", fmt.Errorf("State %s NOT IMPLEMENTED", container.State)
+		return "", fmt.Errorf("state %s NOT IMPLEMENTED", container.State.Status)
 	default:
-		return "", fmt.Errorf("Invalid container state: %s", container.State)
+		return "", fmt.Errorf("invalid container state: %s", container.State.Status)
 	}
 
 	return container.ID, nil
@@ -88,14 +88,14 @@ func (c *Connection) EnsureStopped(name string) error {
 
 	container, err := c.GetContainer(name)
 	if err != nil {
-		return fmt.Errorf("Failed to get docker container: %s", err)
+		return fmt.Errorf("failed to get docker container: %w", err)
 	}
 
 	if container == nil {
 		return nil
 	}
 
-	log.Printf("FOUND %s %s", container.ID, container.State)
+	log.Printf("FOUND %s %s", container.ID, container.State.Status)
 
 	// TODO(jp3): implement stopping the container
 
@@ -104,15 +104,15 @@ func (c *Connection) EnsureStopped(name string) error {
 		log.Printf("CREATED")
 	case "running":
 		if err := c.Stop(container.ID); err != nil {
-			return fmt.Errorf("Failed to stop container: %s", err)
+			return fmt.Errorf("failed to stop container: %w", err)
 		}
 	case "paused":
 		if err := c.Stop(container.ID); err != nil {
-			return fmt.Errorf("Failed to stop container: %s", err)
+			return fmt.Errorf("failed to stop container: %w", err)
 		}
 	case "restarting":
 		if err := c.Stop(container.ID); err != nil {
-			return fmt.Errorf("Failed to stop container: %s", err)
+			return fmt.Errorf("failed to stop container: %w", err)
 		}
 	case "removing":
 		log.Printf("REMOVING")
@@ -121,7 +121,7 @@ func (c *Connection) EnsureStopped(name string) error {
 	case "dead":
 		log.Printf("DEAD")
 	default:
-		return fmt.Errorf("Invalid container state: %s", container.State)
+		return fmt.Errorf("invalid container state: %s", container.State.Status)
 	}
 
 	return nil
@@ -132,14 +132,14 @@ func (c *Connection) EnsureRemoved(name string) error {
 
 	container, err := c.GetContainer(name)
 	if err != nil {
-		return fmt.Errorf("Failed to get docker container: %s", err)
+		return fmt.Errorf("failed to get docker container: %w", err)
 	}
 
 	if container == nil {
 		return nil
 	}
 
-	log.Printf("FOUND %s %s", container.ID, container.State)
+	log.Printf("FOUND %s %s", container.ID, container.State.Status)
 
 	return c.Remove(name, true)
 }
