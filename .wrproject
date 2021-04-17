@@ -1,7 +1,7 @@
 default = "dev"
 
 [crates.dev]
-  image = "wharfr/dev:1.16.3"
+  image = "wharfr/dev:1.16.3b"
   mount-home = true
   project-mount = "/go/src/wharfr.at/wharfrat"
   working-dir = "project, match"
@@ -12,6 +12,7 @@ default = "dev"
     "/go/bin/*",
   ]
   setup-post = """
+    mkdir -p /go/bin /go/pkg
     chown -R "${WR_EXT_USER}:${WR_EXT_GROUP}" /go/bin /go/pkg
   """
 
