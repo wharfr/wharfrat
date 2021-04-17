@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 
 	"golang.org/x/sys/unix"
 
@@ -22,16 +23,27 @@ func (s *Server) Execute(args []string) error {
 
 	version.ShowVersion()
 
-	status := unix.WaitStatus(0)
-	usage := unix.Rusage{}
+	child := make(chan os.Signal, 1)
+	signal.Notify(child, unix.SIGCHLD)
+
 	for {
-		pid, err := unix.Wait4(-1, &status, 0, &usage)
-		if err != nil {
-			log.Printf("WAIT4 FAILED: %s", err)
-			continue
+		select {
+		case <-child:
+			status := unix.WaitStatus(0)
+			usage := unix.Rusage{}
+			for {
+				pid, err := unix.Wait4(-1, &status, unix.WNOHANG, &usage)
+				if err != nil {
+					log.Printf("WAIT4 FAILED: %s", err)
+					break
+				}
+				if pid == 0 {
+					break
+				}
+				log.Printf("REAP: %d - %s", pid, err)
+				log.Printf("  STATUS: %d", status)
+				log.Printf("  USAGE: %#v", usage)
+			}
 		}
-		log.Printf("REAP: %d - %s", pid, err)
-		log.Printf("  STATUS: %d", status)
-		log.Printf("  USAGE: %#v", usage)
 	}
 }
