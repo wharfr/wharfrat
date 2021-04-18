@@ -15,22 +15,22 @@ import (
 func Create(relPath string, crates []string, c *docker.Connection) error {
 	proj, err := config.LocateProject(".")
 	if err != nil {
-		return fmt.Errorf("failed to find project: %s", err)
+		return fmt.Errorf("failed to find project: %w", err)
 	}
 	if len(crates) == 0 {
 		crates = getCrateNames(proj)
 	}
 	path, err := filepath.Abs(relPath)
 	if err != nil {
-		return fmt.Errorf("failed to convert %s to absolute path: %s", err)
+		return fmt.Errorf("failed to convert %s to absolute path: %w", relPath, err)
 	}
 	if _, err := os.Stat(path); err == nil {
 		return fmt.Errorf("%s already exists", path)
 	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("failed to stat %s: %s", err)
+		return fmt.Errorf("failed to stat %s: %w", path, err)
 	}
 	if err := ensure(path); err != nil {
-		return fmt.Errorf("failed to setup environment: %s", err)
+		return fmt.Errorf("failed to setup environment: %w", err)
 	}
 	s, err := newState(path, proj.Path(), crates, c)
 	if err != nil {
@@ -39,11 +39,11 @@ func Create(relPath string, crates []string, c *docker.Connection) error {
 	}
 	if err := writeActivate(path); err != nil {
 		os.RemoveAll(path)
-		return fmt.Errorf("failed to write activate script: %s", err)
+		return fmt.Errorf("failed to write activate script: %w", err)
 	}
 	if err := s.Save(); err != nil {
 		os.RemoveAll(path)
-		return fmt.Errorf("failed to save state: %s", err)
+		return fmt.Errorf("failed to save state: %w", err)
 	}
 	return nil
 }

@@ -25,7 +25,7 @@ type Connection struct {
 
 func Connect() (*Connection, error) {
 	host := config.Local().DockerURL
-	opts := []func(*client.Client) error{}
+	opts := []client.Opt{}
 	if host != "" {
 		opts = append(opts, client.WithHost(host))
 	}
@@ -67,7 +67,7 @@ func (c *Connection) List() ([]types.Container, error) {
 			filtered = append(filtered, container)
 		}
 	}
-	return all, nil
+	return filtered, nil
 }
 
 func (c *Connection) GetContainer(name string) (*types.ContainerJSON, error) {
@@ -141,7 +141,7 @@ func (c *Connection) calcWorkdirSingle(id, user, workdir string, crate *config.C
 		}
 		log.Printf("REL: %s %s", rel, local)
 		if strings.HasPrefix(rel, "../") {
-			return "", fmt.Errorf("Current path is not inside project")
+			return "", fmt.Errorf("current path is not inside project")
 		}
 		return filepath.Join(crate.ProjectMount, rel), nil
 	case "home":
@@ -156,11 +156,11 @@ func (c *Connection) calcWorkdirSingle(id, user, workdir string, crate *config.C
 			return "", err
 		}
 		if exit != 0 {
-			return "", fmt.Errorf("Failed to get home directory for %s: %s", user, stderr.String())
+			return "", fmt.Errorf("failed to get home directory for %s: %s", user, stderr.String())
 		}
 		return string(bytes.TrimSpace(stdout.Bytes())), nil
 	}
-	return "", fmt.Errorf("Invalid working-dir: '%s'", workdir)
+	return "", fmt.Errorf("invalid working-dir: '%s'", workdir)
 }
 
 func (c *Connection) Login(addr, user, pass string) (*types.AuthConfig, error) {

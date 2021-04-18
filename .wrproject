@@ -1,12 +1,24 @@
 default = "dev"
 
 [crates.dev]
-  image = "wharfr/dev:1.11.2"
-  mount-home = false
+  image = "wharfr/dev:1.16.3b"
+  mount-home = true
   project-mount = "/go/src/wharfr.at/wharfrat"
   working-dir = "project, match"
   env-blacklist = ["GOPATH"]
+  volumes = ["/tmp:/tmp"]
   shell = "/bin/sh"
+  export-bin = [
+    "/usr/local/go/bin/*",
+    "/go/bin/*",
+  ]
+  setup-post = """
+    mkdir -p /go/bin /go/pkg
+    chown -R "${WR_EXT_USER}:${WR_EXT_GROUP}" /go/bin /go/pkg
+  """
+
+[crates.dev.cmd-replace.go]
+  "/usr/local/go" = "${WHARFRAT_PROJECT_DIR}/.wrenv"
 
 [crates.docs]
   image = "wharfr/docs"

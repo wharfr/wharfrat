@@ -12,7 +12,7 @@ import (
 )
 
 type Run struct {
-	Stop        bool   `short:"s" long:"stop" description:"Stop contiainer instead of running command"`
+	Stop        bool   `short:"s" long:"stop" description:"Stop container instead of running command"`
 	Crate       string `short:"c" long:"crate" value-name:"NAME" description:"Name of crate to run"`
 	Clean       bool   `long:"clean" description:"Rebuild container from Image"`
 	AutoClean   bool   `long:"auto-clean" description:"Automatically apply --clean, if the container is old"`
@@ -25,20 +25,20 @@ type Run struct {
 func (opts *Run) stop(args []string) error {
 	c, err := docker.Connect()
 	if err != nil {
-		return fmt.Errorf("Failed to create docker client: %s", err)
+		return fmt.Errorf("failed to create docker client: %w", err)
 	}
 	defer c.Close()
 
 	crate, err := config.GetCrate(".", opts.Crate, c)
 	if err != nil {
-		return fmt.Errorf("Config error: %s", err)
+		return fmt.Errorf("config error: %w", err)
 	}
 	log.Printf("Crate: %#v", crate)
 
 	log.Printf("Container: %s", crate.ContainerName())
 
 	if err := c.EnsureStopped(crate.ContainerName()); err != nil {
-		return fmt.Errorf("Failed to stop container: %s", err)
+		return fmt.Errorf("failed to stop container: %w", err)
 	}
 
 	return nil
@@ -51,13 +51,13 @@ func (opts *Run) client(args []string) (int, error) {
 
 	c, err := docker.Connect()
 	if err != nil {
-		return 1, fmt.Errorf("Failed to create docker client: %s", err)
+		return 1, fmt.Errorf("failed to create docker client: %w", err)
 	}
 	defer c.Close()
 
 	crate, err := config.GetCrate(".", opts.Crate, c)
 	if err != nil {
-		return 1, fmt.Errorf("Config error: %s", err)
+		return 1, fmt.Errorf("config error: %w", err)
 	}
 	log.Printf("Crate: %#v", crate)
 
@@ -75,7 +75,7 @@ func (opts *Run) client(args []string) (int, error) {
 
 	if opts.Clean {
 		if err := c.EnsureRemoved(crate.ContainerName()); err != nil {
-			return 1, fmt.Errorf("Failed to remove container: %s", err)
+			return 1, fmt.Errorf("failed to remove container: %w", err)
 		}
 	}
 
@@ -89,7 +89,7 @@ func (opts *Run) client(args []string) (int, error) {
 
 	container, err := c.EnsureRunning(crate, opts.Force, autoClean)
 	if err != nil {
-		return 1, fmt.Errorf("Failed to run container: %s", err)
+		return 1, fmt.Errorf("failed to run container: %w", err)
 	}
 
 	if len(args) == 0 {
@@ -98,7 +98,7 @@ func (opts *Run) client(args []string) (int, error) {
 
 	ret, err := c.ExecCmd(container, args, crate, opts.User, opts.Workdir)
 	if err != nil {
-		return 1, fmt.Errorf("Failed to exec command: %s", err)
+		return 1, fmt.Errorf("failed to exec command: %w", err)
 	}
 
 	log.Printf("RETCODE: %d", ret)

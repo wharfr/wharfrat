@@ -25,7 +25,7 @@ func (i *Info) Execute(args []string) error {
 
 	crate, err := config.GetCrate(".", i.Crate, client)
 	if err != nil {
-		return fmt.Errorf("Config error: %s", err)
+		return fmt.Errorf("config error: %w", err)
 	}
 	log.Printf("Crate: %#v", crate)
 

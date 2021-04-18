@@ -14,8 +14,8 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker/label"
-	"wharfr.at/wharfrat/lib/version"
 	"wharfr.at/wharfrat/lib/vc"
+	"wharfr.at/wharfrat/lib/version"
 
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
@@ -23,6 +23,8 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type CreatedFunc func(c *Connection, id string, crate *config.Crate)
@@ -36,12 +38,12 @@ func AfterCreate(f CreatedFunc) {
 func getSelf() (*bytes.Buffer, error) {
 	self, err := os.Open("/proc/self/exe")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get self: %s", err)
+		return nil, fmt.Errorf("failed to get self: %w", err)
 	}
 	defer self.Close()
 	selfData, err := ioutil.ReadAll(self)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read self: %s", err)
+		return nil, fmt.Errorf("failed to read self: %w", err)
 	}
 
 	initHdr := &tar.Header{
@@ -86,21 +88,21 @@ func getSelf() (*bytes.Buffer, error) {
 	defer w.Close()
 
 	if err := w.WriteHeader(initHdr); err != nil {
-		return nil, fmt.Errorf("Failed to build self archive (init header): %s", err)
+		return nil, fmt.Errorf("failed to build self archive (init header): %w", err)
 	}
 	if _, err := w.Write(selfData); err != nil {
-		return nil, fmt.Errorf("Failed to build self archive (init data): %s", err)
+		return nil, fmt.Errorf("failed to build self archive (init data): %w", err)
 	}
 
 	if err := w.WriteHeader(wharfratHdr); err != nil {
-		return nil, fmt.Errorf("Failed to build self archive (wharfrat header): %s", err)
+		return nil, fmt.Errorf("failed to build self archive (wharfrat header): %w", err)
 	}
 	if _, err := w.Write(selfData); err != nil {
-		return nil, fmt.Errorf("Failed to build self archive (wharfrat data): %s", err)
+		return nil, fmt.Errorf("failed to build self archive (wharfrat data): %w", err)
 	}
 
 	if err := w.WriteHeader(wrHdr); err != nil {
-		return nil, fmt.Errorf("Failed to build self archive (wr header): %s", err)
+		return nil, fmt.Errorf("failed to build self archive (wr header): %w", err)
 	}
 
 	return buf, nil
@@ -113,12 +115,12 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	// }
 	self, err := getSelf()
 	if err != nil {
-		return "", fmt.Errorf("Failed to get self: %s", err)
+		return "", fmt.Errorf("failed to get self: %w", err)
 	}
 
 	usr, err := user.Current()
 	if err != nil {
-		return "", fmt.Errorf("Failed to get user information: %s", err)
+		return "", fmt.Errorf("failed to get user information: %w", err)
 	}
 
 	labels := map[string]string{
@@ -171,13 +173,13 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	if crate.ProjectMount != "" {
-		pdir := filepath.Dir(crate.ProjectPath())
-		binds = append(binds, pdir+":"+crate.ProjectMount)
+		pDir := filepath.Dir(crate.ProjectPath())
+		binds = append(binds, pDir+":"+crate.ProjectMount)
 	}
 
 	if crate.Volumes != nil {
 		for _, volume := range crate.Volumes {
-			binds = append(binds, os.Expand(volume, crate.Getenvish))
+			binds = append(binds, os.Expand(volume, crate.Getenv))
 		}
 	}
 
@@ -199,6 +201,12 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	networkingConfig := &network.NetworkingConfig{}
 
+	// TODO: hard code the platform for now ...
+	platform := &specs.Platform{
+		Architecture: "amd64",
+		OS:           "linux",
+	}
+
 	var namedRef reference.Named
 
 	ref, err := reference.ParseAnyReference(config.Image)
@@ -211,7 +219,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	log.Printf("IMAGE: %s %s %s", config.Image, namedRef, reference.FamiliarString(namedRef))
 
-	create, err := c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, crate.ContainerName())
+	create, err := c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, platform, crate.ContainerName())
 	if client.IsErrNotFound(err) && namedRef != nil {
 		fmt.Fprintf(os.Stderr, "Unable to find image '%s' locally\n", reference.FamiliarString(namedRef))
 
@@ -227,7 +235,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		labels[label.Config] = crate.Json()
 
 		var retryErr error
-		create, retryErr = c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, crate.ContainerName())
+		create, retryErr = c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, platform, crate.ContainerName())
 		if retryErr != nil {
 			return "", retryErr
 		}
@@ -236,13 +244,19 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 	cid := create.ID
 
+	log.Printf("CREATE COMPLETE: %s", cid)
+
 	if err := c.c.CopyToContainer(c.ctx, cid, "/", self, types.CopyToContainerOptions{}); err != nil {
 		return "", err
 	}
 
+	log.Printf("SELF COPIED: %s", cid)
+
 	if err := c.c.ContainerStart(c.ctx, cid, types.ContainerStartOptions{}); err != nil {
 		return "", err
 	}
+
+	log.Printf("STARTED: %s", cid)
 
 	if err := c.setup(cid, crate); err != nil {
 		c.EnsureRemoved(crate.ContainerName())
@@ -252,6 +266,8 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	for _, f := range created {
 		f(c, cid, crate)
 	}
+
+	log.Printf("CREATE COMPLETE: %s", cid)
 
 	return cid, nil
 }

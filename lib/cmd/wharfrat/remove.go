@@ -17,11 +17,11 @@ func (s *Remove) Execute(args []string) error {
 
 	if s.All {
 		if len(args) != 0 {
-			return fmt.Errorf("No name allowed with --all")
+			return fmt.Errorf("no name allowed with --all")
 		}
 	} else {
 		if len(args) < 1 {
-			return fmt.Errorf("At least one container name required")
+			return fmt.Errorf("at least one container name required")
 		}
 	}
 
@@ -44,10 +44,7 @@ func (s *Remove) Execute(args []string) error {
 	log.Printf("FOUND: %d", len(containers))
 
 	for _, container := range containers {
-		name := container.Names[0]
-		if strings.HasPrefix(name, "/") {
-			name = name[1:]
-		}
+		name := strings.TrimPrefix(container.Names[0], "/")
 
 		if !s.All && !names[name] {
 			continue

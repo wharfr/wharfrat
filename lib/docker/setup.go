@@ -25,7 +25,7 @@ func (c *Connection) setupUser(id string, crate *config.Crate, usr *user.User, g
 	for _, name := range crate.CopyGroups {
 		group, err := user.LookupGroup(name)
 		if err != nil {
-			return fmt.Errorf("Failed to get group information for '%s': %s", name, err)
+			return fmt.Errorf("failed to get group information for '%s': %w", name, err)
 		}
 		cmd = append(cmd, "--create-group", fmt.Sprintf("%s=%s", name, group.Gid))
 	}
@@ -40,7 +40,7 @@ func (c *Connection) setupUser(id string, crate *config.Crate, usr *user.User, g
 
 	buf := &bytes.Buffer{}
 
-	exitCode, err := c.run(id, cmd, nil, nil, nil, buf)
+	exitCode, err := c.run(id, cmd, nil, nil, buf, buf)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (c *Connection) setupUser(id string, crate *config.Crate, usr *user.User, g
 	log.Printf("Setup stderr: %s", buf)
 
 	if exitCode != 0 {
-		return fmt.Errorf("Setup command failed (%d): %s", exitCode, buf)
+		return fmt.Errorf("setup user command failed (%d): %s", exitCode, buf)
 	}
 
 	return nil
@@ -69,7 +69,7 @@ func (c *Connection) setupPrep(id, prep, path string, args ...string) error {
 	cmd.Dir = path
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("Setup prep script failed: %s", err)
+		return fmt.Errorf("setup prep script failed: %w", err)
 	}
 
 	return nil
@@ -96,13 +96,13 @@ func (c *Connection) runScript(id, label, script string, env map[string]string) 
 
 	exitCode, err := c.run(id, cmd, env, stdin, os.Stdout, os.Stderr)
 	if err != nil {
-		return fmt.Errorf("Setup %s script failed: %s", label, err)
+		return fmt.Errorf("setup %s script failed: %w", label, err)
 	}
 
 	log.Printf("SETUP %s: %d", label, exitCode)
 
 	if exitCode != 0 {
-		return fmt.Errorf("Setup %s script failed: exit status %d", label, exitCode)
+		return fmt.Errorf("setup %s script failed: exit status %d", label, exitCode)
 	}
 
 	return nil
@@ -114,7 +114,7 @@ func (c *Connection) installTarball(id string, base, src, dst string) error {
 	}
 
 	if !filepath.IsAbs(dst) {
-		return fmt.Errorf("Tarball dest '%s' should be absolute path", dst)
+		return fmt.Errorf("tarball dest '%s' should be absolute path", dst)
 	}
 
 	log.Printf("INSTALL TARBALL: %s -> %s", src, dst)
@@ -164,12 +164,12 @@ func (c *Connection) setup(id string, crate *config.Crate) error {
 
 	usr, err := user.Current()
 	if err != nil {
-		return fmt.Errorf("Failed to get user information: %s", err)
+		return fmt.Errorf("failed to get user information: %w", err)
 	}
 
 	group, err := user.LookupGroupId(usr.Gid)
 	if err != nil {
-		return fmt.Errorf("Failed to get group information: %s", err)
+		return fmt.Errorf("failed to get group information: %w", err)
 	}
 
 	if err := c.setupUser(id, crate, usr, group); err != nil {

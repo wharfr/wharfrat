@@ -13,7 +13,7 @@ import (
 
 type Start struct {
 	All   bool `short:"a" long:"all"`
-	Force bool `long:"force" decription:"Ignore out of date crate configuration"`
+	Force bool `long:"force" description:"Ignore out of date crate configuration"`
 }
 
 func (s *Start) Execute(args []string) error {
@@ -21,11 +21,11 @@ func (s *Start) Execute(args []string) error {
 
 	if s.All {
 		if len(args) != 0 {
-			return fmt.Errorf("No name allowed with --all")
+			return fmt.Errorf("no name allowed with --all")
 		}
 	} else {
 		if len(args) < 1 {
-			return fmt.Errorf("At least one container name required")
+			return fmt.Errorf("at least one container name required")
 		}
 	}
 
@@ -51,19 +51,16 @@ func (s *Start) Execute(args []string) error {
 		projectFile := container.Labels[label.Project]
 		crateName := container.Labels[label.Crate]
 
-		name := container.Names[0]
-		if strings.HasPrefix(name, "/") {
-			name = name[1:]
-		}
+		name := strings.TrimPrefix(container.Names[0], "/")
 
 		crate, err := config.OpenCrate(projectFile, crateName, client)
 		if err != nil && !os.IsNotExist(err) && err != config.CrateNotFound {
-			return fmt.Errorf("Failed to lookup crate: %s", err)
+			return fmt.Errorf("failed to lookup crate: %w", err)
 		}
 
 		if s.All || names[name] {
 			if crate == nil {
-				fmt.Printf("Failed to start %s: crate config mising\n", name)
+				fmt.Printf("Failed to start %s: crate config missing\n", name)
 				continue
 			}
 			if _, err := client.EnsureRunning(crate, s.Force, false); err != nil {

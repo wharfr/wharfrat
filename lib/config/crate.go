@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"strings"
 
 	"wharfr.at/wharfrat/lib/docker/label"
+	"wharfr.at/wharfrat/lib/output"
 	"wharfr.at/wharfrat/lib/vc"
 )
 
@@ -22,35 +24,49 @@ type LabelSource interface {
 	ImageLabels(name string) (map[string]string, error)
 }
 
+type Replace map[string]string
+
+func (r Replace) Rewrite(cmd string, w io.Writer, mapping func(string) string) io.Writer {
+	out := w
+	for match, replace := range r {
+		match := os.Expand(match, mapping)
+		replace := os.Expand(replace, mapping)
+		log.Printf("REPLACE (%s): %s -> %s", cmd, match, replace)
+		out = output.NewRewriter(out, []byte(match), []byte(replace))
+	}
+	return out
+}
+
 type Crate struct {
-	CapAdd       []string          `toml:"cap-add"`
-	CapDrop      []string          `toml:"cap-drop"`
-	CopyGroups   []string          `toml:"copy-groups"`
-	Env          map[string]string `toml:"env"`
-	EnvBlacklist []string          `toml:"env-blacklist"`
-	EnvWhitelist []string          `toml:"env-whitelist"`
-	ExportBin    []string          `toml:"export-bin"`
-	Groups       []string          `toml:"groups"`
-	Hostname     string            `toml:"hostname"`
-	Image        string            `toml:"image"`
-	ImageCmd     string            `toml:"image-cmd"`
-	MountHome    bool              `toml:"mount-home"`
-	Network      string            `toml:"network"`
-	PathAppend   []string          `toml:"path-append"`
-	PathPrepend  []string          `toml:"path-prepend"`
-	Ports        []string          `toml:"ports"`
-	ProjectMount string            `toml:"project-mount"`
-	SetupPost    string            `toml:"setup-post"`
-	SetupPre     string            `toml:"setup-pre"`
-	SetupPrep    string            `toml:"setup-prep"`
-	Shell        string            `toml:"shell"`
-	Tarballs     map[string]string `toml:"tarballs"`
-	Tmpfs        []string          `toml:"tmpfs"`
-	Volumes      []string          `toml:"volumes"`
-	WorkingDir   string            `toml:"working-dir"`
-	project      *Project          `toml:"-"`
-	name         string            `toml:"-"`
-	branch       string            `toml:"-"`
+	CapAdd       []string           `toml:"cap-add"`
+	CapDrop      []string           `toml:"cap-drop"`
+	CopyGroups   []string           `toml:"copy-groups"`
+	CmdReplace   map[string]Replace `toml:"cmd-replace"`
+	Env          map[string]string  `toml:"env"`
+	EnvBlacklist []string           `toml:"env-blacklist"`
+	EnvWhitelist []string           `toml:"env-whitelist"`
+	ExportBin    []string           `toml:"export-bin"`
+	Groups       []string           `toml:"groups"`
+	Hostname     string             `toml:"hostname"`
+	Image        string             `toml:"image"`
+	ImageCmd     string             `toml:"image-cmd"`
+	MountHome    bool               `toml:"mount-home"`
+	Network      string             `toml:"network"`
+	PathAppend   []string           `toml:"path-append"`
+	PathPrepend  []string           `toml:"path-prepend"`
+	Ports        []string           `toml:"ports"`
+	ProjectMount string             `toml:"project-mount"`
+	SetupPost    string             `toml:"setup-post"`
+	SetupPre     string             `toml:"setup-pre"`
+	SetupPrep    string             `toml:"setup-prep"`
+	Shell        string             `toml:"shell"`
+	Tarballs     map[string]string  `toml:"tarballs"`
+	Tmpfs        []string           `toml:"tmpfs"`
+	Volumes      []string           `toml:"volumes"`
+	WorkingDir   string             `toml:"working-dir"`
+	project      *Project           `toml:"-"`
+	name         string             `toml:"-"`
+	branch       string             `toml:"-"`
 }
 
 const CrateNotFound = notFound("Crate Not Found")
@@ -75,7 +91,7 @@ func LocateCrate(start string) (string, error) {
 func GetCrate(start, name string, ls LabelSource) (*Crate, error) {
 	project, err := LocateProject(start)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse project file: %s", err)
+		return nil, fmt.Errorf("failed to parse project file: %w", err)
 	}
 	log.Printf("Project: %#v", project)
 
@@ -83,7 +99,7 @@ func GetCrate(start, name string, ls LabelSource) (*Crate, error) {
 	if crateName == "" {
 		crateName, err = LocateCrate(start)
 		if err != nil && err != NotFound {
-			return nil, fmt.Errorf("Failed to parse crate file: %s", err)
+			return nil, fmt.Errorf("failed to parse crate file: %w", err)
 		}
 	}
 
@@ -117,7 +133,7 @@ func runImageCmd(command string, projectDir string) (string, error) {
 	cmd.Stdout = buf
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(),
-		"WHARFRAT_PROJECT_DIR=" + projectDir,
+		"WHARFRAT_PROJECT_DIR="+projectDir,
 	)
 	if err := cmd.Run(); err != nil {
 		return "", err
@@ -285,7 +301,7 @@ func (c *Crate) Hash() string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func (c *Crate) Getenvish(name string) string {
+func (c *Crate) Getenv(name string) string {
 	switch name {
 	case "WHARFRAT_NAME":
 		return c.ContainerName()
