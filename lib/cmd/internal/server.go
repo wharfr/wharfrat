@@ -26,24 +26,24 @@ func (s *Server) Execute(args []string) error {
 	child := make(chan os.Signal, 1)
 	signal.Notify(child, unix.SIGCHLD)
 
-	for {
-		select {
-		case <-child:
-			status := unix.WaitStatus(0)
-			usage := unix.Rusage{}
-			for {
-				pid, err := unix.Wait4(-1, &status, unix.WNOHANG, &usage)
-				if err != nil {
-					log.Printf("WAIT4 FAILED: %s", err)
-					break
-				}
-				if pid == 0 {
-					break
-				}
-				log.Printf("REAP: %d", pid)
-				log.Printf("  STATUS: %d", status)
-				log.Printf("  USAGE: %#v", usage)
+	for range child {
+		status := unix.WaitStatus(0)
+		usage := unix.Rusage{}
+		for {
+			pid, err := unix.Wait4(-1, &status, unix.WNOHANG, &usage)
+			if err != nil && err != unix.ECHILD {
+				log.Printf("WAIT4 FAILED: %s", err)
+				break
 			}
+			if pid == 0 || err == unix.ECHILD {
+				// no more children to reap
+				break
+			}
+			log.Printf("REAP: %d", pid)
+			log.Printf("  STATUS: %d", status)
+			log.Printf("  USAGE: %#v", usage)
 		}
 	}
+
+	return nil
 }
