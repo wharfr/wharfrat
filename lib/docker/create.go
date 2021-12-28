@@ -148,6 +148,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	config := &container.Config{
 		ExposedPorts: exposed,
 		User:         "root:root",
+		Entrypoint:   []string{},
 		Cmd:          []string{"/sbin/wr-init", "server", "--debug"},
 		Image:        crate.Image,
 		Hostname:     crate.Hostname,
