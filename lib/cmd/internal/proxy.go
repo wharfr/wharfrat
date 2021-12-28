@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -12,15 +13,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/docker/docker/pkg/term"
+	"github.com/moby/term"
 	"golang.org/x/sys/unix"
 )
-
-type args struct {
-	Dir string `positional-arg-name:"dir" required:"true"`
-	Cmd string `positional-arg-name:"cmd" required:"true"`
-	//	Args []string `positional-arg-name:"args" required:"0"`
-}
 
 type Proxy struct {
 	Sync        bool     `long:"sync"`
@@ -28,25 +23,27 @@ type Proxy struct {
 	Groups      []string `long:"group"`
 	PathAppend  []string `long:"append-path"`
 	PathPrepend []string `long:"prepend-path"`
-	//	Args    args `positional-args:"true" required:"true"`
 }
 
-func (p *Proxy) Wait() error {
+func (p *Proxy) Wait(logOut io.Writer) error {
 	// 1. setup terminal (raw & disable echo)
 	inFd, inTerm := term.GetFdInfo(os.Stdin)
 	if inTerm {
 		inState, err := term.SetRawTerminal(inFd)
 		if err != nil {
-			return fmt.Errorf("Failed to set raw terminal mode: %s", err)
+			return fmt.Errorf("failed to set raw terminal mode: %w", err)
 		}
 		if err := term.DisableEcho(inFd, inState); err != nil {
-			return fmt.Errorf("Failed to disable terminal echo: %s", err)
+			return fmt.Errorf("failed to disable terminal echo: %w", err)
 		}
 		defer term.RestoreTerminal(inFd, inState)
 	}
 
 	// 2. tell client we are ready
 	os.Stdout.Write([]byte("PROXY READY\n"))
+
+	// 2b. we can enable logging now if requested
+	log.SetOutput(logOut)
 
 	// 3. wait for client to tell us to continue
 	cmd := []byte{}
@@ -81,15 +78,24 @@ func (p *Proxy) Execute(args []string) error {
 	runtime.GOMAXPROCS(1)
 	runtime.LockOSThread()
 
+	// If sync is enabled then we can't output anything before the "PROXY READY"
+	// message ...
+	logOut := log.Writer()
+	if p.Sync {
+		log.SetOutput(io.Discard)
+	}
+
 	log.Printf("PROXY: %s %#v", args, p)
 	if len(args) < 1 {
-		return fmt.Errorf("Need at least 1 argument for proxy")
+		log.SetOutput(logOut)
+		return fmt.Errorf("need at least 1 argument for proxy")
 	}
 	log.Printf("PROXY: sync: %v, dir: %s, cmd: %v", p.Sync, p.Workdir, args)
 
 	if p.Sync {
 		log.Printf("PROXY WAIT ...\n")
-		if err := p.Wait(); err != nil {
+		if err := p.Wait(logOut); err != nil {
+			log.SetOutput(logOut)
 			return err
 		}
 		log.Printf("PROXY RUN ...\n")
@@ -97,17 +103,17 @@ func (p *Proxy) Execute(args []string) error {
 
 	if p.Workdir != "" {
 		if err := os.Chdir(p.Workdir); err != nil {
-			return fmt.Errorf("Failed to change directory to %s: %s", p.Workdir, err)
+			return fmt.Errorf("failed to change directory to %s: %w", p.Workdir, err)
 		}
 	}
 
 	u, err := user.LookupId(strconv.Itoa(os.Getuid()))
 	if err != nil {
-		return fmt.Errorf("Failed to lookup current user: %s", err)
+		return fmt.Errorf("failed to lookup current user: %w", err)
 	}
 	gid, err := strconv.Atoi(u.Gid)
 	if err != nil {
-		return fmt.Errorf("Invalid GID '%s': %s", u.Gid, err)
+		return fmt.Errorf("invalid GID '%s': %w", u.Gid, err)
 	}
 	groups := []int{gid}
 	for _, name := range p.Groups {
@@ -128,7 +134,7 @@ func (p *Proxy) Execute(args []string) error {
 	}
 
 	if err := unix.Setreuid(os.Getuid(), os.Getuid()); err != nil {
-		return fmt.Errorf("Failed to set UID: %s")
+		return fmt.Errorf("failed to set UID: %w", err)
 	}
 
 	p.updatePath()
@@ -139,13 +145,13 @@ func (p *Proxy) Execute(args []string) error {
 
 	cmd, err := exec.LookPath(args[0])
 	if err != nil {
-		return fmt.Errorf("Failed to find %s: %s", args[0], err)
+		return fmt.Errorf("failed to find %s: %w", args[0], err)
 	}
 
 	log.Printf("PROXY: EXEC %s %v", cmd, args)
 
 	if err := syscall.Exec(cmd, args, env); err != nil {
-		return fmt.Errorf("Failed to exec %s: %s", err)
+		return fmt.Errorf("failed to exec %s: %w", cmd, err)
 	}
 	return nil
 }

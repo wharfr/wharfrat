@@ -15,6 +15,7 @@ version="$(../dist/wharfrat version | awk '/^Version/{print $2}')"
 version="${version#v}"
 release="${version#*-}"
 release="${release//-/_}"
+combined="${version//-/_}"
 version="${version%%-*}"
 if [ "$release" == "$version" ]; then
     release="0"
@@ -32,6 +33,12 @@ fi
 
 echo -e "${c}build deb ...${r}"
 ../dist/wr --auto-clean -c deb bash ./build-deb "$version" "$release"
+
+echo -e "${c}insert version info PKGBUILD file ...${r}"
+sed -e "s#@@VERSION@@#$combined#" PKGBUILD > wr.PKGBUILD
+
+echo -e "${c}build arch package ...${r}"
+../dist/wr --auto-clean -c arch makepkg -fp "/wharfrat/package/wr.PKGBUILD"
 
 echo -e "${c}cleanup ...${r}"
 rm tmp.spec

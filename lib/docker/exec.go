@@ -16,7 +16,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/docker/docker/pkg/term"
+	"github.com/moby/term"
 )
 
 // buildEnv constructs the environment that we want to use inside the container.
@@ -81,7 +81,7 @@ func buildEnv(id string, crate *config.Crate) ([]string, error) {
 		"VTE_VERSION": true,
 
 		// Blacklist Konsole DBUS variables
-		"KONSOLE_DBUS_SESION":  true,
+		"KONSOLE_DBUS_SESSION": true,
 		"KONSOLE_DBUS_WINDOW":  true,
 		"KONSOLE_DBUS_SERVICE": true,
 
@@ -109,6 +109,47 @@ func buildEnv(id string, crate *config.Crate) ([]string, error) {
 	return env, nil
 }
 
+func wrGetenv(id string, crate *config.Crate) func(string) string {
+	return func(key string) string {
+		if strings.HasPrefix(key, "WHARFRAT_") {
+			switch key {
+			case "WHARFRAT_ID":
+				return id
+			case "WHARFRAT_NAME":
+				return crate.ContainerName()
+			case "WHARFRAT_CRATE":
+				return crate.Name()
+			case "WHARFRAT_PROJECT":
+				return crate.ProjectPath()
+			case "WHARFRAT_PROJECT_DIR":
+				return filepath.Dir(crate.ProjectPath())
+			default:
+				log.Printf("wrGetenv: unknown WHARFRAT_ variable: %s", key)
+				return ""
+			}
+		}
+		if value, found := crate.Env[key]; found {
+			return value
+		}
+		return os.Getenv(key)
+	}
+}
+
+func rewrite(cmd string, out io.Writer, id string, crate *config.Crate) io.Writer {
+	getenv := wrGetenv(id, crate)
+
+	if replace, found := crate.CmdReplace[cmd]; found {
+		return replace.Rewrite(cmd, out, getenv)
+	}
+
+	binary := filepath.Base(cmd)
+	if replace, found := crate.CmdReplace[binary]; found {
+		return replace.Rewrite(binary, out, getenv)
+	}
+
+	return out
+}
+
 func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user, workdir string) (int, error) {
 	container, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
 	if err != nil {
@@ -131,7 +172,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	if workdir == "" {
 		workdir, err = c.calcWorkdir(id, user, crate.WorkingDir, crate)
 		if err != nil {
-			return -1, fmt.Errorf("Failed to set working directory: %s", err)
+			return -1, fmt.Errorf("failed to set working directory: %w", err)
 		}
 	}
 
@@ -185,7 +226,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 
 	execID := resp.ID
 	if execID == "" {
-		return -1, fmt.Errorf("Got empty exec ID")
+		return -1, fmt.Errorf("got empty exec ID")
 	}
 
 	log.Printf("EXEC: ID=%s", execID)
@@ -200,6 +241,8 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	defer attach.Close()
 
 	outChan := make(chan error)
+
+	stdout := rewrite(cmd[0], os.Stdout, id, crate)
 
 	if config.Tty {
 		resizeTty := func() error {
@@ -233,7 +276,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		log.Printf("READ: %s\n", cmd)
 
 		if string(cmd) != "PROXY READY" {
-			return -1, fmt.Errorf("Failed to get proxy ready, got: %s", cmd)
+			return -1, fmt.Errorf("failed to get proxy ready, got: %s", cmd)
 		}
 
 		log.Printf("Initial Resize")
@@ -250,25 +293,25 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 
 		inState, err := term.SetRawTerminal(inFd)
 		if err != nil {
-			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
+			return -1, fmt.Errorf("failed to set raw terminal mode: %w", err)
 		}
 		defer term.RestoreTerminal(inFd, inState)
 
 		outState, err := term.SetRawTerminal(outFd)
 		if err != nil {
-			return -1, fmt.Errorf("Failed to set raw terminal mode: %s", err)
+			return -1, fmt.Errorf("failed to set raw terminal mode: %w", err)
 		}
 		defer term.RestoreTerminal(outFd, outState)
 
 		attach.Conn.Write([]byte("PROXY RUN\n"))
 
 		go func() {
-			_, err := io.Copy(os.Stdout, attach.Reader)
+			_, err := io.Copy(stdout, attach.Reader)
 			outChan <- err
 		}()
 	} else {
 		go func() {
-			_, err := stdcopy.StdCopy(os.Stdout, os.Stderr, attach.Reader)
+			_, err := stdcopy.StdCopy(stdout, os.Stderr, attach.Reader)
 			log.Printf("Copy done")
 			outChan <- err
 		}()
@@ -281,16 +324,16 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 
 	// Wait for copies to finish
 	if err = <-outChan; err != nil {
-		return -1, fmt.Errorf("Error copying output: %s", err)
+		return -1, fmt.Errorf("error copying output: %w", err)
 	}
 
 	inspect, err := c.c.ContainerExecInspect(c.ctx, execID)
 	if err != nil {
-		return -1, fmt.Errorf("Failed to get exec response: %s", err)
+		return -1, fmt.Errorf("failed to get exec response: %w", err)
 	}
 
 	if inspect.Running {
-		return -1, fmt.Errorf("Command still running!")
+		return -1, fmt.Errorf("command still running")
 	}
 
 	return inspect.ExitCode, nil
@@ -331,7 +374,7 @@ func (c *Connection) GetOutput(id string, cmd []string, crate *config.Crate, use
 
 	execID := resp.ID
 	if execID == "" {
-		return nil, nil, fmt.Errorf("Got empty exec ID")
+		return nil, nil, fmt.Errorf("got empty exec ID")
 	}
 
 	log.Printf("EXEC: ID=%s", execID)
@@ -355,20 +398,20 @@ func (c *Connection) GetOutput(id string, cmd []string, crate *config.Crate, use
 
 	// Wait for copies to finish
 	if err = <-outChan; err != nil {
-		return nil, nil, fmt.Errorf("Error copying output: %s", err)
+		return nil, nil, fmt.Errorf("error copying output: %w", err)
 	}
 
 	inspect, err := c.c.ContainerExecInspect(c.ctx, execID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to get exec response: %s", err)
+		return nil, nil, fmt.Errorf("failed to get exec response: %w", err)
 	}
 
 	if inspect.Running {
-		return nil, nil, fmt.Errorf("Command still running!")
+		return nil, nil, fmt.Errorf("command still running")
 	}
 
 	if inspect.ExitCode != 0 {
-		return nil, nil, fmt.Errorf("Command exited with status %d", inspect.ExitCode)
+		return nil, nil, fmt.Errorf("command exited with status %d", inspect.ExitCode)
 	}
 
 	return stdout.Bytes(), stderr.Bytes(), nil

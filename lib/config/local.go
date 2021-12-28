@@ -40,13 +40,13 @@ func loadLocal() {
 	if os.IsNotExist(err) {
 		return
 	} else if err != nil {
-		log.Printf("Failed to open local config: ", err)
+		log.Printf("Failed to open local config: %s", err)
 		return
 	}
 	defer f.Close()
 	md, err := toml.DecodeReader(f, &localConfig)
 	if err != nil {
-		log.Printf("Failed to load local config: ", err)
+		log.Printf("Failed to load local config: %s", err)
 		return
 	}
 	localConfig.path = f.Name()

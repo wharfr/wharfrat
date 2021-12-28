@@ -27,7 +27,7 @@ func (h *Homedir) getUser() (*user.User, error) {
 
 	_, err = strconv.Atoi(h.Args.User)
 	if err != nil {
-		return nil, fmt.Errorf("Unknown user: %s", h.Args.User)
+		return nil, fmt.Errorf("unknown user: %s", h.Args.User)
 	}
 
 	u, err = user.LookupId(h.Args.User)
@@ -39,7 +39,7 @@ func (h *Homedir) getUser() (*user.User, error) {
 		return nil, err
 	}
 
-	return nil, fmt.Errorf("Unknown user: %s", h.Args.User)
+	return nil, fmt.Errorf("unknown user: %s", h.Args.User)
 }
 
 func (h *Homedir) Execute(args []string) error {

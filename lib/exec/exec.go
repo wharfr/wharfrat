@@ -65,7 +65,7 @@ func (e *ExecCfg) Execute(args []string) (int, error) {
 	log.Printf("CRATE: %#v", crate)
 	container, err := client.EnsureRunning(crate, false, e.AutoClean)
 	if err != nil {
-		return 1, fmt.Errorf("Failed to run container: %s", err)
+		return 1, fmt.Errorf("failed to run container: %w", err)
 	}
 	cmd := e.Command
 	if len(cmd) == 0 {

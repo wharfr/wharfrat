@@ -13,8 +13,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/docker/docker/pkg/term"
 	"github.com/docker/docker/registry"
+	"github.com/moby/term"
 )
 
 func (c *Connection) run(id string, cmd []string, env map[string]string, stdin io.Reader, stdout, stderr io.Writer) (int, error) {
@@ -40,7 +40,7 @@ func (c *Connection) run(id string, cmd []string, env map[string]string, stdin i
 
 	execID := resp.ID
 	if execID == "" {
-		return 0, fmt.Errorf("Got empty exec ID")
+		return 0, fmt.Errorf("got empty exec ID")
 	}
 
 	startCheck := types.ExecStartCheck{
@@ -76,16 +76,16 @@ func (c *Connection) run(id string, cmd []string, env map[string]string, stdin i
 
 	// Wait for copies to finish
 	if err = <-outChan; err != nil {
-		return 0, fmt.Errorf("Error copying output: %s", err)
+		return 0, fmt.Errorf("error copying output: %w", err)
 	}
 
 	inspect, err := c.c.ContainerExecInspect(c.ctx, execID)
 	if err != nil {
-		return 0, fmt.Errorf("Failed to get exec response: %s", err)
+		return 0, fmt.Errorf("failed to get exec response: %w", err)
 	}
 
 	if inspect.Running {
-		return 0, fmt.Errorf("Container command (%s) still running", cmd[0])
+		return 0, fmt.Errorf("container command (%s) still running", cmd[0])
 	}
 
 	return inspect.ExitCode, nil
