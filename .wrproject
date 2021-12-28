@@ -38,3 +38,9 @@ default = "dev"
   project-mount = "/wharfrat"
   working-dir = "project, match"
   cap-add = ["SYS_PTRACE"]
+
+[crates.arch]
+  image = "wharfr/arch"
+  mount-home = false
+  project-mount = "/wharfrat"
+  working-dir = "project, match"
