@@ -3,3 +3,6 @@
 /rpms
 /debs/
 /deb-scratch/
+/wr.PKGBUILD
+/pkg/
+/*.zst
