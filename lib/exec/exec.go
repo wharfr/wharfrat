@@ -5,7 +5,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"github.com/burntsushi/toml"
+	"github.com/BurntSushi/toml"
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
 	"wharfr.at/wharfrat/lib/venv"
