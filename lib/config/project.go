@@ -4,7 +4,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"github.com/burntsushi/toml"
+	"github.com/BurntSushi/toml"
 )
 
 type Project struct {
