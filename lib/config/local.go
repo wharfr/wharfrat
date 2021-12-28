@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/burntsushi/toml"
+	"github.com/BurntSushi/toml"
 )
 
 type LocalSetup struct {
