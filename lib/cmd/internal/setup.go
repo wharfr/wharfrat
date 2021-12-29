@@ -137,6 +137,20 @@ func (opts *Setup) setup_group() error {
 	}
 }
 
+func (opts *Setup) add_user_to_group_busybox(group string) error {
+	args := []string{
+		opts.User, group,
+	}
+
+	log.Printf("busybox addgroup args: %#v", args)
+
+	cmd := exec.Command("/usr/sbin/addgroup", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
 func (opts *Setup) setup_user_busybox() error {
 	args := []string{"-D"}
 
@@ -152,8 +166,6 @@ func (opts *Setup) setup_user_busybox() error {
 		args = append(args, "-G", opts.Group)
 	}
 
-	// TODO(jp3): We need to add the user to groups listed in opts.Groups
-
 	if opts.Name != "" {
 		args = append(args, "-g", opts.Name)
 	}
@@ -166,7 +178,17 @@ func (opts *Setup) setup_user_busybox() error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	for _, group := range opts.Groups {
+		if err := opts.add_user_to_group_busybox(group); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (opts *Setup) setup_user_shadow() error {
