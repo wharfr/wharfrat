@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -19,14 +20,42 @@ type Setup struct {
 	MkHome bool     `short:"h" long:"mkhome"`
 }
 
-func (s *Setup) create_group(entry string) error {
-	parts := strings.SplitN(entry, "=", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("'%s' did not match NAME=ID", entry)
+func (opts *Setup) create_group_busybox(name, id string) error {
+	check := exec.Command("/usr/bin/getent", "group", name)
+	switch out, err := check.Output(); err.(type) {
+	case nil:
+		parts := bytes.Split(bytes.TrimSpace(out), []byte(":"))
+		if len(parts) < 3 {
+			return fmt.Errorf("failed to parse getent output: %s", out)
+		}
+		current := string(parts[2])
+		if current != id {
+			return fmt.Errorf("group %s exists with id %s, wanted %s", name, current, id)
+		}
+		return nil
+	case *exec.ExitError:
+		// group doesn't exist, so run addgroup
+	default:
+		// some other error ...
+		return err
 	}
 
 	args := []string{
-		"--force", "--gid", parts[1], parts[0],
+		"-g", id, name,
+	}
+
+	log.Printf("busybox addgroup args: %#v", args)
+
+	cmd := exec.Command("/usr/sbin/addgroup", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+func (s *Setup) create_group_shadow(name, id string) error {
+	args := []string{
+		"--force", "--gid", id, name,
 	}
 
 	log.Printf("groupadd args: %#v", args)
@@ -36,6 +65,19 @@ func (s *Setup) create_group(entry string) error {
 	cmd.Stderr = os.Stderr
 
 	return cmd.Run()
+}
+
+func (opts *Setup) create_group(entry string) error {
+	parts := strings.SplitN(entry, "=", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("'%s' did not match NAME=ID", entry)
+	}
+	name, id := parts[0], parts[1]
+	if path, err := os.Readlink("/usr/sbin/addgroup"); err == nil && strings.HasSuffix(path, "busybox") {
+		return opts.create_group_busybox(name, id)
+	} else {
+		return opts.create_group_shadow(name, id)
+	}
 }
 
 func (opts *Setup) setup_group_busybox() error {
