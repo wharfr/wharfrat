@@ -12,6 +12,7 @@ type Env struct {
 	EnvCreate `command:"create" description:"Create a new environment"`
 	EnvUpdate `command:"update" description:"Update the local wharfrat in the environment"`
 	EnvInfo   `command:"info" description:"Display information about the current environment"`
+	EnvPrune  `command:"prune" description:"Remove any obsolete parts of the environment"`
 }
 
 func (e *Env) Usage() string {
@@ -59,4 +60,12 @@ func (ei *EnvInfo) Execute(args []string) error {
 	venv.DisplayInfo()
 
 	return nil
+}
+
+type EnvPrune struct {
+	Remove bool `short:"r" long:"remove" description:"Remove any obsolete items found"`
+}
+
+func (ep *EnvPrune) Execute(args []string) error {
+	return venv.Prune(ep.Remove)
 }
