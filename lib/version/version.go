@@ -10,7 +10,7 @@ import (
 	"github.com/docker/docker/api"
 )
 
-var versionString = "eyJ2ZXJzaW9uIjoidjAuMTIuMCIsImNvbW1pdCI6ImRiN2M0NTkwMjQ1ZTQxNzVlNGQzNDY3OGZjNjMyMjhhYjQ4YTlmMjYiLCJidWlsZHRpbWUiOiIyMDIyLTAyLTE3VDIwOjM4OjQwWiJ9Cg=="
+var versionString = "eyJ2ZXJzaW9uIjoidjAuMTIuMCIsImNvbW1pdCI6IjlmN2FkNTVjZDkxOTg4ODY2ZTBkZjQzNzIzYzg0NjU1ZDQ2NmM0ZjAiLCJidWlsZHRpbWUiOiIyMDIyLTAyLTE3VDIwOjM4OjUxWiJ9Cg=="
 
 type versionInfo struct {
 	Version   string
