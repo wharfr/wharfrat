@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -15,6 +14,7 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker/label"
+	"wharfr.at/wharfrat/lib/self"
 	"wharfr.at/wharfrat/lib/vc"
 	"wharfr.at/wharfrat/lib/version"
 
@@ -37,14 +37,9 @@ func AfterCreate(f CreatedFunc) {
 }
 
 func getSelf() (*bytes.Buffer, error) {
-	self, err := os.Open("/proc/self/exe")
+	selfData, err := self.GetLinux()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get self: %w", err)
-	}
-	defer self.Close()
-	selfData, err := ioutil.ReadAll(self)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read self: %w", err)
+		return nil, err
 	}
 
 	initHdr := &tar.Header{
