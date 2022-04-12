@@ -11,3 +11,5 @@ func GetLinux() ([]byte, error) {
 func Native() (string, error) {
 	return "", errors.New("not implemented")
 }
+
+const HomeMount = "/Users:/home"

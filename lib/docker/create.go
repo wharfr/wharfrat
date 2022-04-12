@@ -109,7 +109,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	// if err != nil {
 	// 	return "", fmt.Errorf("Failed to get self: %s", err)
 	// }
-	self, err := getSelf()
+	selfTar, err := getSelf()
 	if err != nil {
 		return "", fmt.Errorf("failed to get self: %w", err)
 	}
@@ -166,7 +166,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	if crate.MountHome {
-		binds = append(binds, "/home:/home")
+		binds = append(binds, self.HomeMount)
 	}
 
 	if crate.ProjectMount != "" {
@@ -243,7 +243,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	log.Printf("CREATE COMPLETE: %s", cid)
 
-	if err := c.c.CopyToContainer(c.ctx, cid, "/", self, types.CopyToContainerOptions{}); err != nil {
+	if err := c.c.CopyToContainer(c.ctx, cid, "/", selfTar, types.CopyToContainerOptions{}); err != nil {
 		return "", err
 	}
 
