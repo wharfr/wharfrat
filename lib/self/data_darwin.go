@@ -1,4 +1,4 @@
-// +build !bootstrap
+//go:build !bootstrap
 
 package self
 
