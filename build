@@ -4,6 +4,12 @@ set -e
 
 cd "$(dirname "$0")"
 
+export CGO_ENABLED=0
+if [ "$(uname -s)" == "Darwin" ]; then
+    export GOOS="darwin"
+    unset CGO_ENABLED
+fi
+
 # Make sure the build is running inside the dev container
 if [ -z "$WHARFRAT_NAME" ]; then
     wr="wr"
@@ -19,7 +25,14 @@ if [ -z "$WHARFRAT_NAME" ]; then
         echo "bootstrap ...";
         mkdir -p dist/bootstrap
         image="$(egrep -o 'wharfr/dev(:[^"]*)?' .wrproject)"
-        docker run -i --rm -v $(pwd):/go/src/wharfr.at/wharfrat -w /go/src/wharfr.at/wharfrat -e CGO_ENABLED=0 "${image}" go build -a -tags netgo -installsuffix . -o /go/src/wharfr.at/wharfrat/dist/bootstrap/wr wharfr.at/wharfrat/cmd/wr
+        docker run -i --rm \
+            -v "$(pwd):/go/src/wharfr.at/wharfrat" \
+	    -w /go/src/wharfr.at/wharfrat \
+	    -e "CGO_ENABLED=${CGO_ENABLED}" \
+	    -e "GOOS=${GOOS}" \
+	    "${image}" \
+	    go build -a -tags netgo -installsuffix . \
+	        -o /go/src/wharfr.at/wharfrat/dist/bootstrap/wr wharfr.at/wharfrat/cmd/wr
         wr="$(pwd)/dist/bootstrap/wr";
     fi
 
@@ -32,7 +45,7 @@ cat << EOF | base64 | tr -d '\n'
 EOF
 )
 
-CGO_ENABLED=0 go build -a -tags netgo -installsuffix . -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" -o dist/wharfrat ./cmd/wharfrat
+go build -a -tags netgo -installsuffix . -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" -o dist/wharfrat ./cmd/wharfrat
 ln -sf wharfrat dist/wr
 
 echo "built dist/wharfrat"
