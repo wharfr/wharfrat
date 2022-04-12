@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -204,7 +205,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	// TODO: hard code the platform for now ...
 	platform := &specs.Platform{
-		Architecture: "amd64",
+		Architecture: runtime.GOARCH,
 		OS:           "linux",
 	}
 
