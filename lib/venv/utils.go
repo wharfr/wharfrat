@@ -10,11 +10,10 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
-	"wharfr.at/wharfrat/lib/self"
 )
 
 func copySelf(dest string) error {
-	path, err := self.Native()
+	path, err := os.Executable()
 	if err != nil {
 		return err
 	}

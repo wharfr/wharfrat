@@ -19,8 +19,4 @@ func GetLinux() ([]byte, error) {
 	return selfData, nil
 }
 
-func Native() (string, error) {
-	return "/proc/self/exe", nil
-}
-
 const HomeMount = "/home:/home"
