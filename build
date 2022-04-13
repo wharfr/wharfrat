@@ -57,8 +57,17 @@ cat << EOF | base64 | tr -d '\n'
 EOF
 )
 
+if [ "${GOOS}" == "darwin" ]; then
+    echo "build linux ${version} ..."
+    GOOS="linux" go build -a -tags netgo -installsuffix . \
+        -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" \
+	-o lib/self/dist/wr-linux ./cmd/wharfrat
+fi
+
 echo "build ${version} ..."
-go build -x -a -tags netgo -installsuffix . -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" -o dist/wharfrat ./cmd/wharfrat
+go build -a -tags netgo -installsuffix . \
+    -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" \
+    -o dist/wharfrat ./cmd/wharfrat
 ln -sf wharfrat dist/wr
 
 echo "built dist/wharfrat"
