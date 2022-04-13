@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -53,6 +55,21 @@ func (opts *Setup) setup_group_busybox() error {
 	args := []string{}
 
 	if opts.Gid != "0" {
+		exitErr := &exec.ExitError{}
+		existing := exec.Command("/usr/bin/getent", "group", opts.Gid)
+		switch out, err := existing.Output(); true {
+		case err == nil:
+			// group already exists with the group id, delete it?
+			parts := bytes.Split(out, []byte(":"))
+			group := string(bytes.TrimSpace(parts[0]))
+			if err := exec.Command("/usr/sbin/delgroup", group).Run(); err != nil {
+				return err
+			}
+		case errors.As(err, &exitErr):
+			// gid doesn't exist, so keep going
+		default:
+			return err
+		}
 		args = append(args, "-g", opts.Gid)
 	}
 
