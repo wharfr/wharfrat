@@ -22,7 +22,7 @@ import (
 // buildEnv constructs the environment that we want to use inside the container.
 // It combines values from the crate config, the local config and the current
 // host environment to build the desired initial container environment. A
-// blacklist is applies to the host environment to prevent the container
+// blacklist is applied to the host environment to prevent the container
 // environment from picking up settings that don't make sense (e.g. taking PATH
 // into the container).
 func buildEnv(id string, crate *config.Crate) ([]string, error) {
@@ -69,6 +69,7 @@ func buildEnv(id string, crate *config.Crate) ([]string, error) {
 		"HOST":     true,
 		"USER":     true,
 		"HOME":     true,
+		"TMPDIR":   true,
 
 		// Blacklist prompt variables
 		"PS0": true,

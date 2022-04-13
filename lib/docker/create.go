@@ -36,6 +36,11 @@ func AfterCreate(f CreatedFunc) {
 	created = append(created, f)
 }
 
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 func getSelf() (*bytes.Buffer, error) {
 	selfData, err := self.GetLinux()
 	if err != nil {
@@ -160,9 +165,10 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		}
 	}
 
-	binds := []string{
-		"/tmp/.X11-unix:/tmp/.X11-unix",
-		//self + ":/sbin/wr-init:ro",
+	binds := []string{}
+
+	if exists("/tmp/.X11-unix") {
+		binds = append(binds, "/tmp/.X11-unix:/tmp/.X11-unix")
 	}
 
 	if crate.MountHome {
