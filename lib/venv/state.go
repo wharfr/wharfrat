@@ -64,6 +64,9 @@ func newState(path, project string, crates []string, c *docker.Connection) (*sta
 			return nil, fmt.Errorf("config error: %w", err)
 		}
 		log.Printf("Crate: %#v", crate)
+		if len(crate.ExportBin) == 0 {
+			continue
+		}
 		id, err := c.EnsureRunning(crate, false, true)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get running container: %w", err)
