@@ -3,11 +3,11 @@ module wharfr.at/wharfrat
 go 1.16
 
 require (
-	github.com/BurntSushi/toml v0.4.1
+	github.com/BurntSushi/toml v1.1.0
 	github.com/Microsoft/go-winio v0.4.17 // indirect
 	github.com/containerd/containerd v1.4.4 // indirect
-	github.com/docker/distribution v2.8.0+incompatible
-	github.com/docker/docker v20.10.12+incompatible
+	github.com/docker/distribution v2.8.1+incompatible
+	github.com/docker/docker v20.10.14+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
@@ -24,8 +24,8 @@ require (
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
-	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
+	golang.org/x/net v0.0.0-20220412020605-290c469a71a5
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	google.golang.org/grpc v1.37.0 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
