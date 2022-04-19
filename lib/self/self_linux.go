@@ -19,4 +19,6 @@ func GetLinux() ([]byte, error) {
 	return selfData, nil
 }
 
-const HomeMount = "/home:/home"
+var HomeMount = []string{
+	"/home:/home",
+}
