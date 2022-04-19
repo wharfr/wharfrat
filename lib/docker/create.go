@@ -172,7 +172,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	if crate.MountHome {
-		binds = append(binds, self.HomeMount)
+		binds = append(binds, self.HomeMount...)
 	}
 
 	if crate.ProjectMount != "" {
