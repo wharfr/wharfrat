@@ -90,7 +90,6 @@ func (p *Proxy) Execute(args []string) error {
 		log.SetOutput(logOut)
 		return fmt.Errorf("need at least 1 argument for proxy")
 	}
-	log.Printf("PROXY: sync: %v, dir: %s, cmd: %v", p.Sync, p.Workdir, args)
 
 	if p.Sync {
 		log.Printf("PROXY WAIT ...\n")
@@ -100,6 +99,8 @@ func (p *Proxy) Execute(args []string) error {
 		}
 		log.Printf("PROXY RUN ...\n")
 	}
+
+	log.Printf("PROXY: sync: %v, dir: %s, cmd: %v", p.Sync, p.Workdir, args)
 
 	if p.Workdir != "" {
 		if err := os.Chdir(p.Workdir); err != nil {
