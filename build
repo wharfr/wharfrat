@@ -24,30 +24,36 @@ if [ -z "$WHARFRAT_NAME" ]; then
         # We need to bootstrap the build by using docker directly
         mkdir -p dist/bootstrap
         image="$(egrep -o 'wharfr/dev(:[^"]*)?' .wrproject)"
-	if [ "${GOOS}" == "darwin" ]; then
+        if [ "${GOOS}" == "darwin" ]; then
             echo "linux bootstrap ...";
             docker run -i --rm \
                 -v "$(pwd):/go/src/wharfr.at/wharfrat" \
-	        -w /go/src/wharfr.at/wharfrat \
-	        -e "CGO_ENABLED=0" \
-	        "${image}" \
-	        go build -a -tags netgo -installsuffix . \
-	            -o /go/src/wharfr.at/wharfrat/lib/self/dist/bootstrap/wr-linux wharfr.at/wharfrat/cmd/wr
-	fi
+                -w /go/src/wharfr.at/wharfrat \
+                -e "CGO_ENABLED=0" \
+                "${image}" \
+                go build -a -tags netgo -installsuffix . \
+                    -o /go/src/wharfr.at/wharfrat/lib/self/dist/bootstrap/wr-linux wharfr.at/wharfrat/cmd/wr
+        fi
         echo "bootstrap ...";
         docker run -i --rm \
             -v "$(pwd):/go/src/wharfr.at/wharfrat" \
-	    -w /go/src/wharfr.at/wharfrat \
-	    -e "CGO_ENABLED=${CGO_ENABLED}" \
-	    -e "GOOS=${GOOS}" \
-	    "${image}" \
-	    go build -a -tags "netgo bootstrap" -installsuffix . \
-	        -o /go/src/wharfr.at/wharfrat/dist/bootstrap/wr wharfr.at/wharfrat/cmd/wr
+            -w /go/src/wharfr.at/wharfrat \
+            -e "CGO_ENABLED=${CGO_ENABLED}" \
+            -e "GOOS=${GOOS}" \
+            "${image}" \
+            go build -a -tags "netgo bootstrap" -installsuffix . \
+                -o /go/src/wharfr.at/wharfrat/dist/bootstrap/wr wharfr.at/wharfrat/cmd/wr
         wr="$(pwd)/dist/bootstrap/wr";
     fi
 
     echo "re-run build ...";
     exec "$wr" --auto-clean "./$(basename "$0")" "$@";
+fi
+
+if [ "${GOOS}" == "darwin" ]; then
+    # It seems that we have to wait a bit for docker to sort out permissions
+    # when running on mac ...
+    sleep 1
 fi
 
 version="$(git describe --dirty --match "v[0-9]*")"
@@ -60,12 +66,14 @@ EOF
 if [ "${GOOS}" == "darwin" ]; then
     echo "build linux ${version} ..."
     GOOS="linux" go build -a -tags netgo -installsuffix . \
+        -buildvcs=false \
         -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" \
-	-o lib/self/dist/wr-linux ./cmd/wharfrat
+        -o lib/self/dist/wr-linux ./cmd/wharfrat
 fi
 
 echo "build ${version} ..."
 go build -a -tags netgo -installsuffix . \
+    -buildvcs=false \
     -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" \
     -o dist/wharfrat ./cmd/wharfrat
 ln -sf wharfrat dist/wr
