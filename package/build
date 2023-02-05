@@ -4,14 +4,19 @@ set -e
 
 cd "$(dirname "$0")"
 
-c="\e[36m"
-r="\e[0m"
+c=$'\e[36m'
+r=$'\e[0m'
 
 echo -e "${c}build wharfrat ...${r}"
-../build
+GOOS=linux GOARCH=amd64 ../build
+GOOS=linux GOARCH=arm64 ../build
+GOOS=darwin GOARCH=amd64 ../build
+GOOS=darwin GOARCH=arm64 ../build
+
+source "../.setup.sh"
 
 echo -e "${c}get version ...${r}"
-version="$(../dist/wharfrat version | awk '/^Version/{print $2}')"
+version="$("${plat_dist}/wharfrat" version | awk '/^Version/{print $2}')"
 version="${version#v}"
 release="${version#*-}"
 release="${release//-/_}"
@@ -22,23 +27,29 @@ if [ "$release" == "$version" ]; then
 fi
 echo "VERSION: $version, RELEASE: $release"
 
+echo -e "${c}package wharfrat ...${r}"
+tar -zcf "$(pwd)/wharfrat_${version}_${release}_linux_amd64.tgz" -C "$(pwd)/../dist/linux/amd64" .
+tar -zcf "$(pwd)/wharfrat_${version}_${release}_linux_arm64.tgz" -C "$(pwd)/../dist/linux/arm64" .
+tar -zcf "$(pwd)/wharfrat_${version}_${release}_darwin_amd64.tgz" -C "$(pwd)/../dist/darwin/amd64" .
+tar -zcf "$(pwd)/wharfrat_${version}_${release}_darwin_arm64.tgz" -C "$(pwd)/../dist/darwin/arm64" .
+
 echo -e "${c}insert version into spec file ...${r}"
 sed -e "s#@@VERSION@@#$version#" -e "s#@@RELEASE@@#$release#" wharfrat.spec > tmp.spec
 
 echo -e "${c}build rpm ...${r}"
-../dist/wr --auto-clean -c rpm rpmbuild --define "_topdir /wharfrat/package/rpm-root" -bb tmp.spec
+"${plat_dist}/wr" --auto-clean -c rpm rpmbuild --define "_topdir /wharfrat/package/rpm-root" -bb tmp.spec
 if ! [ -L "rpms" ]; then
     ln -sf rpm-root/RPMS/x86_64 rpms
 fi
 
 echo -e "${c}build deb ...${r}"
-../dist/wr --auto-clean -c deb bash ./build-deb "$version" "$release"
+"${plat_dist}/wr" --auto-clean -c deb bash ./build-deb "$version" "$release"
 
 echo -e "${c}insert version info PKGBUILD file ...${r}"
 sed -e "s#@@VERSION@@#$combined#" PKGBUILD > wr.PKGBUILD
 
 echo -e "${c}build arch package ...${r}"
-../dist/wr --auto-clean -c arch makepkg -fp "/wharfrat/package/wr.PKGBUILD"
+"${plat_dist}/wr" --auto-clean -c arch makepkg -fp "/wharfrat/package/wr.PKGBUILD"
 
 echo -e "${c}cleanup ...${r}"
 rm tmp.spec

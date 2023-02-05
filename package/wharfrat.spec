@@ -17,7 +17,7 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/usr/share/licenses/wharfrat
 cp /wharfrat/LICENSE $RPM_BUILD_ROOT/usr/share/licenses/wharfrat/
 mkdir -p $RPM_BUILD_ROOT/%{_bindir}
-install /wharfrat/dist/wharfrat $RPM_BUILD_ROOT/%{_bindir}
+install /wharfrat/dist/linux/amd64/wharfrat $RPM_BUILD_ROOT/%{_bindir}
 ln -s wharfrat $RPM_BUILD_ROOT/%{_bindir}/wr
 ln -s wharfrat $RPM_BUILD_ROOT/%{_bindir}/wr-exec
 mkdir -p $RPM_BUILD_ROOT/usr/share/bash_completion/completions
