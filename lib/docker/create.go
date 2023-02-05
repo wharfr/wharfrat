@@ -4,16 +4,17 @@ import (
 	"archive/tar"
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker/label"
+	"wharfr.at/wharfrat/lib/self"
 	"wharfr.at/wharfrat/lib/vc"
 	"wharfr.at/wharfrat/lib/version"
 
@@ -35,15 +36,15 @@ func AfterCreate(f CreatedFunc) {
 	created = append(created, f)
 }
 
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 func getSelf() (*bytes.Buffer, error) {
-	self, err := os.Open("/proc/self/exe")
+	selfData, err := self.GetLinux()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get self: %w", err)
-	}
-	defer self.Close()
-	selfData, err := ioutil.ReadAll(self)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read self: %w", err)
+		return nil, err
 	}
 
 	initHdr := &tar.Header{
@@ -113,7 +114,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	// if err != nil {
 	// 	return "", fmt.Errorf("Failed to get self: %s", err)
 	// }
-	self, err := getSelf()
+	selfTar, err := getSelf()
 	if err != nil {
 		return "", fmt.Errorf("failed to get self: %w", err)
 	}
@@ -164,13 +165,14 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		}
 	}
 
-	binds := []string{
-		"/tmp/.X11-unix:/tmp/.X11-unix",
-		//self + ":/sbin/wr-init:ro",
+	binds := []string{}
+
+	if exists("/tmp/.X11-unix") {
+		binds = append(binds, "/tmp/.X11-unix:/tmp/.X11-unix")
 	}
 
 	if crate.MountHome {
-		binds = append(binds, "/home:/home")
+		binds = append(binds, self.HomeMount...)
 	}
 
 	if crate.ProjectMount != "" {
@@ -204,7 +206,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	// TODO: hard code the platform for now ...
 	platform := &specs.Platform{
-		Architecture: "amd64",
+		Architecture: runtime.GOARCH,
 		OS:           "linux",
 	}
 
@@ -247,7 +249,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	log.Printf("CREATE COMPLETE: %s", cid)
 
-	if err := c.c.CopyToContainer(c.ctx, cid, "/", self, types.CopyToContainerOptions{}); err != nil {
+	if err := c.c.CopyToContainer(c.ctx, cid, "/", selfTar, types.CopyToContainerOptions{}); err != nil {
 		return "", err
 	}
 

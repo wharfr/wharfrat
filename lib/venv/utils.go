@@ -13,7 +13,11 @@ import (
 )
 
 func copySelf(dest string) error {
-	return copyFile(dest, "/proc/self/exe")
+	path, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	return copyFile(dest, path)
 }
 
 func copyFile(dest, source string) error {

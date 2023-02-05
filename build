@@ -4,35 +4,97 @@ set -e
 
 cd "$(dirname "$0")"
 
+export CGO_ENABLED=0
+if [ "$(uname -s)" == "Darwin" ]; then
+    export BUILD_WAIT_FOR_DOCKER=true
+    if [ -z "${GOOS}" ]; then
+        export GOOS="darwin"
+    fi
+fi
+
+if [[ -z "${GOOS}" ]]; then
+    export GOOS="$(go env GOOS)"
+fi
+
+if [[ -z "${GOARCH}" ]]; then
+    export GOARCH="$(go env GOARCH)"
+fi
+
+if [ "${GOOS}" == "darwin" ]; then
+    unset CGO_ENABLED
+fi
+
 # Make sure the build is running inside the dev container
 if [ -z "$WHARFRAT_NAME" ]; then
     wr="wr"
 
+    source "$(pwd)/.setup.sh"
+
     # We would prefer to use the last built version if there is one
-    if [ -x dist/wharfrat ]; then
-        ln -sf wharfrat dist/wr
-        wr="$(pwd)/dist/wr";
+    if [ -x "${plat_dist}/wharfrat" ]; then
+        ln -sf wharfrat "${plat_dist}/wr"
+        wr="${plat_dist}/wr";
     fi
 
     if ! "$wr" --auto-clean --force true 2> /dev/null; then
         # We need to bootstrap the build by using docker directly
-        echo "bootstrap ...";
         mkdir -p dist/bootstrap
         image="$(egrep -o 'wharfr/dev(:[^"]*)?' .wrproject)"
-        docker run -i --rm -v $(pwd):/go/src/wharfr.at/wharfrat -w /go/src/wharfr.at/wharfrat -e CGO_ENABLED=0 "${image}" go build -a -tags netgo -installsuffix . -o /go/src/wharfr.at/wharfrat/dist/bootstrap/wr wharfr.at/wharfrat/cmd/wr
+        if [ "${GOOS}" == "darwin" ]; then
+            echo "linux bootstrap ...";
+            docker run -i --rm \
+                -v "$(pwd):/go/src/wharfr.at/wharfrat" \
+                -w /go/src/wharfr.at/wharfrat \
+                -e "CGO_ENABLED=0" \
+                "${image}" \
+                go build -a -tags netgo -installsuffix . \
+                    -o /go/src/wharfr.at/wharfrat/lib/self/dist/bootstrap/wr-linux wharfr.at/wharfrat/cmd/wr
+        fi
+        echo "bootstrap ...";
+        docker run -i --rm \
+            -v "$(pwd):/go/src/wharfr.at/wharfrat" \
+            -w /go/src/wharfr.at/wharfrat \
+            -e "CGO_ENABLED=${CGO_ENABLED}" \
+            -e "GOOS=${GOOS}" \
+            "${image}" \
+            go build -a -tags "netgo bootstrap" -installsuffix . \
+                -o /go/src/wharfr.at/wharfrat/dist/bootstrap/wr wharfr.at/wharfrat/cmd/wr
         wr="$(pwd)/dist/bootstrap/wr";
     fi
 
+    echo "re-run build ...";
     exec "$wr" --auto-clean "./$(basename "$0")" "$@";
 fi
 
+if [ "${BUILD_WAIT_FOR_DOCKER}" == "true" ]; then
+    # It seems that we have to wait a bit for docker to sort out permissions
+    # when running on mac ...
+    sleep 1
+fi
+
+version="$(git describe --dirty --match "v[0-9]*")"
 ver=$(
 cat << EOF | base64 | tr -d '\n'
-{"version":"$(git describe --dirty --match "v[0-9]*")","commit":"$(git rev-parse HEAD)","buildtime":"$(date --utc +%Y-%m-%dT%H:%M:%SZ)"}
+{"version":"${version}","commit":"$(git rev-parse HEAD)","buildtime":"$(date --utc +%Y-%m-%dT%H:%M:%SZ)"}
 EOF
 )
 
-CGO_ENABLED=0 go build -a -tags netgo -installsuffix . -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" -o dist/wharfrat ./cmd/wharfrat
-ln -sf wharfrat dist/wr
+echo "build ${GOOS}/${GOARCH} ..."
 
-echo "built dist/wharfrat"
+if [ "${GOOS}" == "darwin" ]; then
+    echo "build linux ${version} ..."
+    GOOS="linux" go build -a -tags netgo -installsuffix . \
+        -buildvcs=false \
+        -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" \
+        -o lib/self/dist/wr-linux ./cmd/wharfrat
+fi
+
+echo "build ${version} ..."
+mkdir -p "dist/${GOOS}/${GOARCH}"
+go build -a -tags netgo -installsuffix . \
+    -buildvcs=false \
+    -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" \
+    -o "dist/${GOOS}/${GOARCH}/wharfrat" ./cmd/wharfrat
+ln -sf wharfrat "dist/${GOOS}/${GOARCH}/wr"
+
+echo "built dist/${GOOS}/${GOARCH}/wharfrat"
