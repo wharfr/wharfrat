@@ -48,7 +48,7 @@ sed -e "${sed_script}" "${dir}/template.control" > "${scratch}/DEBIAN/control"
 
 echo "Collate files ..."
 
-cp "${base}/dist/${name}" "${scratch}/usr/bin/"
+cp "${base}/dist/linux/amd64/${name}" "${scratch}/usr/bin/"
 ln -s "wharfrat" "${scratch}/usr/bin/wr"
 
 cp "${base}/LICENSE" "${scratch}/usr/share/doc/${name}/copyright"

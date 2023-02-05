@@ -6,7 +6,21 @@ cd "$(dirname "$0")"
 
 export CGO_ENABLED=0
 if [ "$(uname -s)" == "Darwin" ]; then
-    export GOOS="darwin"
+    export BUILD_WAIT_FOR_DOCKER=true
+    if [ -z "${GOOS}" ]; then
+        export GOOS="darwin"
+    fi
+fi
+
+if [[ -z "${GOOS}" ]]; then
+    export GOOS="$(go env GOOS)"
+fi
+
+if [[ -z "${GOARCH}" ]]; then
+    export GOARCH="$(go env GOARCH)"
+fi
+
+if [ "${GOOS}" == "darwin" ]; then
     unset CGO_ENABLED
 fi
 
@@ -14,10 +28,12 @@ fi
 if [ -z "$WHARFRAT_NAME" ]; then
     wr="wr"
 
+    source "$(pwd)/.setup.sh"
+
     # We would prefer to use the last built version if there is one
-    if [ -x dist/wharfrat ]; then
-        ln -sf wharfrat dist/wr
-        wr="$(pwd)/dist/wr";
+    if [ -x "${plat_dist}/wharfrat" ]; then
+        ln -sf wharfrat "${plat_dist}/wr"
+        wr="${plat_dist}/wr";
     fi
 
     if ! "$wr" --auto-clean --force true 2> /dev/null; then
@@ -50,7 +66,7 @@ if [ -z "$WHARFRAT_NAME" ]; then
     exec "$wr" --auto-clean "./$(basename "$0")" "$@";
 fi
 
-if [ "${GOOS}" == "darwin" ]; then
+if [ "${BUILD_WAIT_FOR_DOCKER}" == "true" ]; then
     # It seems that we have to wait a bit for docker to sort out permissions
     # when running on mac ...
     sleep 1
@@ -63,6 +79,8 @@ cat << EOF | base64 | tr -d '\n'
 EOF
 )
 
+echo "build ${GOOS}/${GOARCH} ..."
+
 if [ "${GOOS}" == "darwin" ]; then
     echo "build linux ${version} ..."
     GOOS="linux" go build -a -tags netgo -installsuffix . \
@@ -72,10 +90,11 @@ if [ "${GOOS}" == "darwin" ]; then
 fi
 
 echo "build ${version} ..."
+mkdir -p "dist/${GOOS}/${GOARCH}"
 go build -a -tags netgo -installsuffix . \
     -buildvcs=false \
     -ldflags "-X wharfr.at/wharfrat/lib/version.versionString=${ver}" \
-    -o dist/wharfrat ./cmd/wharfrat
-ln -sf wharfrat dist/wr
+    -o "dist/${GOOS}/${GOARCH}/wharfrat" ./cmd/wharfrat
+ln -sf wharfrat "dist/${GOOS}/${GOARCH}/wr"
 
-echo "built dist/wharfrat"
+echo "built dist/${GOOS}/${GOARCH}/wharfrat"

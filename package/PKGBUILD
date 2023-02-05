@@ -38,7 +38,7 @@ check() {
 
 package() {
 	install -Dm644 /wharfrat/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
-	install -Dm755 /wharfrat/dist/wharfrat "$pkgdir/usr/bin/wharfrat"
+	install -Dm755 /wharfrat/dist/linux/amd64/wharfrat "$pkgdir/usr/bin/wharfrat"
 	ln -s wharfrat "$pkgdir/usr/bin/wr"
 	ln -s wharfrat "$pkgdir/usr/bin/wr-exec"
 	install -Dm644 /wharfrat/bash_completion/wharfrat "$pkgdir/usr/share/bash_completion/completions/wharfrat"
