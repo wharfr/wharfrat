@@ -12,8 +12,8 @@ require (
 	github.com/moby/term v0.0.0-20221205130635-1aeaba878587
 	github.com/opencontainers/image-spec v1.0.2
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
-	golang.org/x/net v0.5.0
-	golang.org/x/sys v0.4.0
+	golang.org/x/net v0.7.0
+	golang.org/x/sys v0.5.0
 )
 
 require (
