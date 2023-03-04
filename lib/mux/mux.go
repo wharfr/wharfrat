@@ -16,15 +16,16 @@ const (
 )
 
 type Writer struct {
-	w  io.Writer
-	id uint32
-	m  sync.Mutex
+	w    io.Writer
+	id   uint32
+	m    sync.Mutex
+	resp chan error
 }
 
 var _ io.Writer = (*Writer)(nil)
 
 func NewWriter(w io.Writer, id uint32) *Writer {
-	return &Writer{w: w, id: id}
+	return &Writer{w: w, id: id, resp: make(chan error, 1)}
 }
 
 func (w *Writer) write(b []byte) (int, error) {
@@ -39,15 +40,25 @@ func (w *Writer) write(b []byte) (int, error) {
 	if _, err := w.w.Write(hdr); err != nil {
 		return 0, err
 	}
-	return w.w.Write(b)
+	if _, err := w.w.Write(b); err != nil {
+		return 0, err
+	}
+	if err := <-w.resp; err != nil {
+		return 0, err
+	}
+	return len(b), nil
+}
+
+func (w *Writer) response(err error) {
+	w.resp <- err
 }
 
 func (w *Writer) Write(b []byte) (int, error) {
 	n := 0
 	for len(b) > 0 {
 		s := len(b)
-		if s > math.MaxUint32 {
-			s = math.MaxUint32
+		if s > math.MaxInt32 {
+			s = math.MaxInt32
 		}
 		w, err := w.write(b[:s])
 		n += w
@@ -80,20 +91,40 @@ func (w *Writer) Close() error {
 
 type Receiver struct {
 	o map[uint32]io.Writer
+	w map[uint32]*Writer
+	m *Mux
+}
+
+func newReceiver(m *Mux) *Receiver {
+	return &Receiver{
+		o: make(map[uint32]io.Writer),
+		w: make(map[uint32]*Writer),
+		m: m,
+	}
 }
 
 func NewReceiver() *Receiver {
-	return &Receiver{o: make(map[uint32]io.Writer)}
+	return newReceiver(nil)
 }
 
 func (rcv *Receiver) Add(id uint32, w io.Writer) {
 	rcv.o[id] = w
 }
 
+func (rcv *Receiver) addWriter(id uint32, w *Writer) {
+	rcv.w[id] = w
+}
+
+func (rcv *Receiver) Close(id uint32) {
+	delete(rcv.o, id)
+	delete(rcv.w, id)
+}
+
 func (rcv *Receiver) SplitCopy(r io.Reader) error {
 	buffer := make([]byte, 4096)
 	chunkComplete := true
 	chunkSize := 0
+	isError := false
 	id := uint32(0)
 	hdr := make([]byte, 0, headerSize)
 	msg := make([]byte, 0, 4096)
@@ -102,11 +133,11 @@ func (rcv *Receiver) SplitCopy(r io.Reader) error {
 
 	var buf []byte
 	for {
-		log.Printf("LOOP: %d", len(buf))
+		log.Printf("LOOP(%p): %d %v %d", rcv, len(buf), chunkComplete, chunkSize)
 		if len(buf) == 0 {
 			buf = buffer[:]
 			n, err := r.Read(buf)
-			log.Printf("READ: %d %v", n, buf[:n])
+			log.Printf("READ(%p): %d %v", rcv, n, buf[:n])
 			if errors.Is(err, io.EOF) {
 				if chunkComplete {
 					return nil
@@ -124,6 +155,7 @@ func (rcv *Receiver) SplitCopy(r io.Reader) error {
 
 		if chunkComplete {
 			chunkComplete = false
+			isError = false
 
 			log.Printf("READ HDR")
 
@@ -141,11 +173,27 @@ func (rcv *Receiver) SplitCopy(r io.Reader) error {
 
 			log.Printf("HDR: %d %d", id, chunkSize)
 
+			if chunkSize&0x80000000 != 0 {
+				chunkSize &= ^0x80000000
+				isError = true
+				log.Printf("ERROR: %d %d", id, chunkSize)
+			}
+
 			hdr = hdr[:0]
 			msg = msg[:0]
 		}
 
 		if chunkSize == 0 {
+			chunkComplete = true
+			if isError {
+				// we need to report no error to writer
+				log.Printf("SUCCESS: %d %p", id, rcv.w[id])
+				if w := rcv.w[id]; w != nil {
+					log.Printf("RESPONSE: %d %p", id, w)
+					w.response(nil)
+				}
+				continue
+			}
 			// this is a close
 			if w := rcv.o[id]; w != nil {
 				log.Printf("CLOSE: %d", id)
@@ -169,13 +217,26 @@ func (rcv *Receiver) SplitCopy(r io.Reader) error {
 		msg = append(msg, buf[:left]...)
 		buf = buf[left:]
 
+		if isError {
+			// report error to the writer
+			log.Printf("ERROR: %d '%s' %p", id, msg, rcv.w[id])
+			if w := rcv.w[id]; w != nil {
+				log.Printf("RESPONSE: %d %p", id, w)
+				w.response(errors.New(string(msg)))
+			}
+			continue
+		}
+
 		log.Printf("MSG(%d): %p %v", id, rcv.o[id], msg)
 		if w := rcv.o[id]; w != nil {
 			log.Printf("WRITE(%d): %v", id, msg)
-			if _, err := w.Write(msg); err != nil {
-				log.Printf("WRITE %d FAILED: %s", id, err)
-				return err
+			_, err := w.Write(msg)
+			log.Printf("WRITE %d RESULT: %s", id, err)
+			if rcv.m != nil {
+				log.Printf("SEND ERROR: %d %s", id, err)
+				rcv.m.sendError(id, err)
 			}
+			// delete(rcv.o, id)
 		}
 	}
 }
@@ -207,24 +268,48 @@ type Mux struct {
 }
 
 func New(in io.Reader, out io.Writer) *Mux {
-	return &Mux{
+	m := &Mux{
 		out: out,
 		in:  in,
-		r:   NewReceiver(),
 	}
+	m.r = newReceiver(m)
+	return m
 }
 
 func (m *Mux) Connect(id uint32) *Conn {
-	pr, pw := io.Pipe()
-	m.r.Add(id, pw)
 	return &Conn{
-		w: NewWriter(m.out, id),
-		r: pr,
+		w: m.Send(id),
+		r: m.Read(id),
 	}
 }
 
+func (m *Mux) write(id uint32, data []byte, flag bool) error {
+	msg := make([]byte, headerSize+len(data))
+	chunkSize := uint32(len(data))
+	if flag {
+		chunkSize |= uint32(0x80000000)
+	}
+	binary.BigEndian.PutUint32(msg[idOffset:sizeOffset], id)
+	binary.BigEndian.PutUint32(msg[sizeOffset:headerSize], chunkSize)
+	copy(msg[headerSize:], data)
+	log.Printf("MUX WRITE: %d %d %d %v", len(data), chunkSize, len(msg), msg)
+	if _, err := m.out.Write(msg); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Mux) sendError(id uint32, err error) error {
+	if err == nil {
+		return m.write(id, nil, true)
+	}
+	return m.write(id, []byte(err.Error()), true)
+}
+
 func (m *Mux) Send(id uint32) *Writer {
-	return NewWriter(m.out, id)
+	w := NewWriter(m.out, id)
+	m.r.addWriter(id, w)
+	return w
 }
 
 func (m *Mux) Recv(id uint32, w io.Writer) {

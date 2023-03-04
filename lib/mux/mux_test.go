@@ -2,6 +2,7 @@ package mux_test
 
 import (
 	"io"
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,11 +26,16 @@ func setup() (in, out *mux.Mux) {
 }
 
 func transmit(msg string, in io.Writer, out io.Reader) (string, error) {
-	if _, err := in.Write([]byte(msg)); err != nil {
-		return "", err
-	}
+	resp := make(chan error, 1)
+	go func() {
+		_, err := in.Write([]byte(msg))
+		resp <- err
+	}()
 	buf := make([]byte, len(msg))
 	if _, err := out.Read(buf); err != nil {
+		return "", err
+	}
+	if err := <-resp; err != nil {
 		return "", err
 	}
 	return string(buf), nil
@@ -78,11 +84,13 @@ func TestConnCloseOut(t *testing.T) {
 	respIn := make(chan error, 1)
 	go func() {
 		respIn <- in.Process()
+		log.Printf("IN DONE")
 	}()
 
 	respOut := make(chan error, 1)
 	go func() {
 		respOut <- out.Process()
+		log.Printf("OUT DONE")
 	}()
 
 	cIn := in.Connect(0)
