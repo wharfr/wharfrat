@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"math"
+	"sync"
 )
 
 const (
@@ -16,6 +17,7 @@ const (
 type Writer struct {
 	w  io.Writer
 	id uint32
+	m  sync.Mutex
 }
 
 var _ io.Writer = (*Writer)(nil)
@@ -25,6 +27,11 @@ func NewWriter(w io.Writer, id uint32) *Writer {
 }
 
 func (w *Writer) write(b []byte) (int, error) {
+	w.m.Lock()
+	defer w.m.Unlock()
+	if w.w == nil {
+		return 0, io.ErrClosedPipe
+	}
 	hdr := make([]byte, headerSize)
 	binary.BigEndian.PutUint32(hdr[idOffset:sizeOffset], w.id)
 	binary.BigEndian.PutUint32(hdr[sizeOffset:headerSize], uint32(len(b)))
@@ -49,6 +56,25 @@ func (w *Writer) Write(b []byte) (int, error) {
 		b = b[s:]
 	}
 	return n, nil
+}
+
+func (w *Writer) Close() error {
+	w.m.Lock()
+	defer w.m.Unlock()
+	if w.w == nil {
+		// already closed
+		return nil
+	}
+	out := w.w
+	w.w = nil
+	// we send a header with size == 0 to close the connection
+	hdr := make([]byte, headerSize)
+	binary.BigEndian.PutUint32(hdr[idOffset:sizeOffset], w.id)
+	binary.BigEndian.PutUint32(hdr[sizeOffset:headerSize], 0)
+	if _, err := out.Write(hdr); err != nil {
+		return err
+	}
+	return nil
 }
 
 type Receiver struct {
@@ -108,6 +134,17 @@ func (rcv *Receiver) SplitCopy(r io.Reader) error {
 
 			hdr = hdr[:0]
 			msg = msg[:0]
+		}
+
+		if chunkSize == 0 {
+			// this is a close
+			if w := rcv.o[id]; w != nil {
+				if c, ok := w.(io.Closer); ok {
+					c.Close()
+				}
+				delete(rcv.o, id)
+			}
+			continue
 		}
 
 		left := chunkSize - len(msg)
