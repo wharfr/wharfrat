@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"log"
 	"math"
 	"sync"
 )
@@ -97,11 +98,15 @@ func (rcv *Receiver) SplitCopy(r io.Reader) error {
 	hdr := make([]byte, 0, headerSize)
 	msg := make([]byte, 0, 4096)
 
+	log.Printf("RECV: %v", rcv.o)
+
 	var buf []byte
 	for {
+		log.Printf("LOOP: %d", len(buf))
 		if len(buf) == 0 {
 			buf = buffer[:]
 			n, err := r.Read(buf)
+			log.Printf("READ: %d %v", n, buf[:n])
 			if errors.Is(err, io.EOF) {
 				if chunkComplete {
 					return nil
@@ -120,6 +125,8 @@ func (rcv *Receiver) SplitCopy(r io.Reader) error {
 		if chunkComplete {
 			chunkComplete = false
 
+			log.Printf("READ HDR")
+
 			// start of new header
 			if len(buf) < headerSize {
 				hdr = append(hdr, buf...)
@@ -132,6 +139,8 @@ func (rcv *Receiver) SplitCopy(r io.Reader) error {
 			id = binary.BigEndian.Uint32(hdr[idOffset:sizeOffset])
 			chunkSize = int(binary.BigEndian.Uint32(hdr[sizeOffset:headerSize]))
 
+			log.Printf("HDR: %d %d", id, chunkSize)
+
 			hdr = hdr[:0]
 			msg = msg[:0]
 		}
@@ -139,6 +148,7 @@ func (rcv *Receiver) SplitCopy(r io.Reader) error {
 		if chunkSize == 0 {
 			// this is a close
 			if w := rcv.o[id]; w != nil {
+				log.Printf("CLOSE: %d", id)
 				if c, ok := w.(io.Closer); ok {
 					c.Close()
 				}
@@ -148,17 +158,22 @@ func (rcv *Receiver) SplitCopy(r io.Reader) error {
 		}
 
 		left := chunkSize - len(msg)
+		log.Printf("LEFT(%d): %d %d", id, len(buf), left)
 		if len(buf) < left {
 			msg = append(msg, buf...)
 			continue
 		}
 
+		log.Printf("COMPLETE: %d", id)
 		chunkComplete = true
 		msg = append(msg, buf[:left]...)
 		buf = buf[left:]
 
+		log.Printf("MSG(%d): %p %v", id, rcv.o[id], msg)
 		if w := rcv.o[id]; w != nil {
+			log.Printf("WRITE(%d): %v", id, msg)
 			if _, err := w.Write(msg); err != nil {
+				log.Printf("WRITE %d FAILED: %s", id, err)
 				return err
 			}
 		}
@@ -220,4 +235,22 @@ func (m *Mux) Read(id uint32) *io.PipeReader {
 	pr, pw := io.Pipe()
 	m.r.Add(id, pw)
 	return pr
+}
+
+func (m *Mux) Process() error {
+	return m.r.SplitCopy(m.in)
+}
+
+func (m *Mux) Close() error {
+	if c, ok := m.in.(io.Closer); ok {
+		if err := c.Close(); err != nil {
+			return err
+		}
+	}
+	if c, ok := m.out.(io.Closer); ok {
+		if err := c.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
