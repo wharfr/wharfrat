@@ -164,3 +164,45 @@ func (rcv *Receiver) SplitCopy(r io.Reader) error {
 		}
 	}
 }
+
+type Conn struct {
+	w *Writer
+	r *io.PipeReader
+}
+
+type Mux struct {
+	out io.Writer
+	in  io.Reader
+	r   *Receiver
+}
+
+func New(in io.Reader, out io.Writer) *Mux {
+	return &Mux{
+		out: out,
+		in:  in,
+		r:   NewReceiver(),
+	}
+}
+
+func (m *Mux) Connect(id uint32) *Conn {
+	pr, pw := io.Pipe()
+	m.r.Add(id, pw)
+	return &Conn{
+		w: NewWriter(m.out, id),
+		r: pr,
+	}
+}
+
+func (m *Mux) Send(id uint32) *Writer {
+	return NewWriter(m.out, id)
+}
+
+func (m *Mux) Recv(id uint32, w io.Writer) {
+	m.r.Add(id, w)
+}
+
+func (m *Mux) Read(id uint32) *io.PipeReader {
+	pr, pw := io.Pipe()
+	m.r.Add(id, pw)
+	return pr
+}
