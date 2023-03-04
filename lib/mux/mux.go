@@ -170,6 +170,21 @@ type Conn struct {
 	r *io.PipeReader
 }
 
+var _ io.ReadWriteCloser = (*Conn)(nil)
+
+func (c *Conn) Write(b []byte) (int, error) {
+	return c.w.Write(b)
+}
+
+func (c *Conn) Read(b []byte) (int, error) {
+	return c.r.Read(b)
+}
+
+func (c *Conn) Close() error {
+	c.r.Close()
+	return c.w.Close()
+}
+
 type Mux struct {
 	out io.Writer
 	in  io.Reader
