@@ -24,7 +24,7 @@ type Writer struct {
 
 var _ io.Writer = (*Writer)(nil)
 
-func NewWriter(w io.Writer, id uint32) *Writer {
+func newWriter(w io.Writer, id uint32) *Writer {
 	return &Writer{w: w, id: id, resp: make(chan error, 1)}
 }
 
@@ -89,38 +89,34 @@ func (w *Writer) Close() error {
 	return nil
 }
 
-type Receiver struct {
+type receiver struct {
 	o map[uint32]io.Writer
 	w map[uint32]*Writer
 	m *Mux
 }
 
-func newReceiver(m *Mux) *Receiver {
-	return &Receiver{
+func newReceiver(m *Mux) *receiver {
+	return &receiver{
 		o: make(map[uint32]io.Writer),
 		w: make(map[uint32]*Writer),
 		m: m,
 	}
 }
 
-func NewReceiver() *Receiver {
-	return newReceiver(nil)
-}
-
-func (rcv *Receiver) Add(id uint32, w io.Writer) {
+func (rcv *receiver) Add(id uint32, w io.Writer) {
 	rcv.o[id] = w
 }
 
-func (rcv *Receiver) addWriter(id uint32, w *Writer) {
+func (rcv *receiver) addWriter(id uint32, w *Writer) {
 	rcv.w[id] = w
 }
 
-func (rcv *Receiver) Close(id uint32) {
+func (rcv *receiver) Close(id uint32) {
 	delete(rcv.o, id)
 	delete(rcv.w, id)
 }
 
-func (rcv *Receiver) SplitCopy(r io.Reader) error {
+func (rcv *receiver) SplitCopy(r io.Reader) error {
 	buffer := make([]byte, 4096)
 	chunkComplete := true
 	chunkSize := 0
@@ -264,7 +260,7 @@ func (c *Conn) Close() error {
 type Mux struct {
 	out io.Writer
 	in  io.Reader
-	r   *Receiver
+	r   *receiver
 }
 
 func New(in io.Reader, out io.Writer) *Mux {
@@ -307,7 +303,7 @@ func (m *Mux) sendError(id uint32, err error) error {
 }
 
 func (m *Mux) Send(id uint32) *Writer {
-	w := NewWriter(m.out, id)
+	w := newWriter(m.out, id)
 	m.r.addWriter(id, w)
 	return w
 }
