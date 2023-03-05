@@ -41,11 +41,16 @@ func (e *Exec) Execute(args []string) error {
 	}
 	go server.Serve()
 
+	log.Printf("WAIT FOR RPC START COMMAND")
 	p.Wait()
 
+	log.Printf("RUN COMMAND")
 	if err := cmd.Run(); err != nil {
 		return err
 	}
+	log.Printf("COMMAND EXITED")
+
+	os.Stdin.Close()
 
 	return <-processCh
 }

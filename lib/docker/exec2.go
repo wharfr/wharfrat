@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -153,6 +154,16 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	m.Recv(4, os.Stderr)
 
 	state(c.c, c.ctx, execID)
+
+	go func() {
+		sig := make(chan os.Signal, 10)
+		signal.Notify(sig)
+		for s := range sig {
+			if err := ctrl.Signal(s); err != nil {
+				log.Printf("Error sending signal: %s", err)
+			}
+		}
+	}()
 
 	// Wait for m.Process to finish
 	if err := <-processCh; err != nil {
