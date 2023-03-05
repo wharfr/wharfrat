@@ -14,6 +14,7 @@ type Script struct {
 	Project   string   `toml:"project"`
 	User      string   `toml:"user"`
 	AutoClean bool     `toml:"auto-clean"`
+	Version   int      `toml:"version"`
 	Path      string
 	Meta      toml.MetaData
 }
@@ -33,5 +34,9 @@ func Parse(path string) (*Script, error) {
 	log.Printf("ExecCfg: %#v", cfg)
 	cfg.Path = absPath
 	cfg.Meta = md
+	if cfg.Version == 0 {
+		// retroactively make the original version 1
+		cfg.Version = 1
+	}
 	return &cfg, nil
 }

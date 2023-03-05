@@ -46,6 +46,7 @@ func Main() int {
 		return 1
 	}
 
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	if !opts.Debug {
 		log.SetOutput(ioutil.Discard)
 	}

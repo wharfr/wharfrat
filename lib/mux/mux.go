@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"log"
 	"math"
 	"sync"
 )
@@ -71,6 +70,7 @@ func (w *Writer) Write(b []byte) (int, error) {
 }
 
 func (w *Writer) Close() error {
+	// TODO: close should remove from receiver
 	w.m.Lock()
 	defer w.m.Unlock()
 	if w.w == nil {
@@ -125,15 +125,18 @@ func (rcv *receiver) SplitCopy(r io.Reader) error {
 	hdr := make([]byte, 0, headerSize)
 	msg := make([]byte, 0, 4096)
 
-	log.Printf("RECV: %v", rcv.o)
+	// log.Printf("RECV: %v %v", rcv.o, rcv.w)
+	// defer func() {
+	// 	log.Printf("RECV DONE: %v %v", rcv.o, rcv.w)
+	// }()
 
 	var buf []byte
 	for {
-		log.Printf("LOOP(%p): %d %v %d", rcv, len(buf), chunkComplete, chunkSize)
+		// log.Printf("LOOP(%p): %d %v %d", rcv, len(buf), chunkComplete, chunkSize)
 		if len(buf) == 0 {
 			buf = buffer[:]
 			n, err := r.Read(buf)
-			log.Printf("READ(%p): %d %v", rcv, n, buf[:n])
+			// log.Printf("READ(%p): %d %v", rcv, n, buf[:n])
 			if errors.Is(err, io.EOF) {
 				if chunkComplete {
 					return nil
@@ -153,7 +156,7 @@ func (rcv *receiver) SplitCopy(r io.Reader) error {
 			chunkComplete = false
 			isError = false
 
-			log.Printf("READ HDR")
+			// log.Printf("READ HDR")
 
 			// start of new header
 			if len(buf) < headerSize {
@@ -167,12 +170,12 @@ func (rcv *receiver) SplitCopy(r io.Reader) error {
 			id = binary.BigEndian.Uint32(hdr[idOffset:sizeOffset])
 			chunkSize = int(binary.BigEndian.Uint32(hdr[sizeOffset:headerSize]))
 
-			log.Printf("HDR: %d %d", id, chunkSize)
+			// log.Printf("HDR: %d %d", id, chunkSize)
 
 			if chunkSize&0x80000000 != 0 {
 				chunkSize &= ^0x80000000
 				isError = true
-				log.Printf("ERROR: %d %d", id, chunkSize)
+				// log.Printf("ERROR: %d %d", id, chunkSize)
 			}
 
 			hdr = hdr[:0]
@@ -183,16 +186,16 @@ func (rcv *receiver) SplitCopy(r io.Reader) error {
 			chunkComplete = true
 			if isError {
 				// we need to report no error to writer
-				log.Printf("SUCCESS: %d %p", id, rcv.w[id])
+				// log.Printf("SUCCESS: %d %p", id, rcv.w[id])
 				if w := rcv.w[id]; w != nil {
-					log.Printf("RESPONSE: %d %p", id, w)
+					// log.Printf("RESPONSE: %d %p", id, w)
 					w.response(nil)
 				}
 				continue
 			}
 			// this is a close
 			if w := rcv.o[id]; w != nil {
-				log.Printf("CLOSE: %d", id)
+				// log.Printf("CLOSE: %d", id)
 				if c, ok := w.(io.Closer); ok {
 					c.Close()
 				}
@@ -202,34 +205,34 @@ func (rcv *receiver) SplitCopy(r io.Reader) error {
 		}
 
 		left := chunkSize - len(msg)
-		log.Printf("LEFT(%d): %d %d", id, len(buf), left)
+		// log.Printf("LEFT(%d): %d %d", id, len(buf), left)
 		if len(buf) < left {
 			msg = append(msg, buf...)
 			continue
 		}
 
-		log.Printf("COMPLETE: %d", id)
+		// log.Printf("COMPLETE: %d", id)
 		chunkComplete = true
 		msg = append(msg, buf[:left]...)
 		buf = buf[left:]
 
 		if isError {
 			// report error to the writer
-			log.Printf("ERROR: %d '%s' %p", id, msg, rcv.w[id])
+			// log.Printf("ERROR: %d '%s' %p", id, msg, rcv.w[id])
 			if w := rcv.w[id]; w != nil {
-				log.Printf("RESPONSE: %d %p", id, w)
+				// log.Printf("RESPONSE: %d %p", id, w)
 				w.response(errors.New(string(msg)))
 			}
 			continue
 		}
 
-		log.Printf("MSG(%d): %p %v", id, rcv.o[id], msg)
+		// log.Printf("MSG(%d): %p %v", id, rcv.o[id], msg)
 		if w := rcv.o[id]; w != nil {
-			log.Printf("WRITE(%d): %v", id, msg)
+			// log.Printf("WRITE(%d): %v", id, msg)
 			_, err := w.Write(msg)
-			log.Printf("WRITE %d RESULT: %s", id, err)
+			// log.Printf("WRITE %d RESULT: %s", id, err)
 			if rcv.m != nil {
-				log.Printf("SEND ERROR: %d %s", id, err)
+				// log.Printf("SEND ERROR: %d %s", id, err)
 				rcv.m.sendError(id, err)
 			}
 			// delete(rcv.o, id)
@@ -288,7 +291,7 @@ func (m *Mux) write(id uint32, data []byte, flag bool) error {
 	binary.BigEndian.PutUint32(msg[idOffset:sizeOffset], id)
 	binary.BigEndian.PutUint32(msg[sizeOffset:headerSize], chunkSize)
 	copy(msg[headerSize:], data)
-	log.Printf("MUX WRITE: %d %d %d %v", len(data), chunkSize, len(msg), msg)
+	// log.Printf("MUX WRITE: %d %d %d %v", len(data), chunkSize, len(msg), msg)
 	if _, err := m.out.Write(msg); err != nil {
 		return err
 	}

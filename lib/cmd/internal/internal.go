@@ -12,6 +12,7 @@ import (
 type options struct {
 	Complete `command:"complete"`
 	Proxy    `command:"proxy"`
+	Exec     `command:"exec"`
 	Server   `command:"server"`
 	Setup    `command:"setup"`
 	Homedir  `command:"homedir"`

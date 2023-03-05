@@ -57,12 +57,14 @@ func (e *ExecCfg) Execute(args []string) (int, error) {
 		args = e.Args
 	}
 	cmd = append(cmd, args...)
-	ret, err := client.ExecCmd(container, cmd, crate, e.User, "")
-	if err != nil {
-		return -1, err
+	defer venv.Update(client, container, crate, e.User, "", cmd)
+
+	switch e.Version {
+	case 1:
+		return client.ExecCmd(container, cmd, crate, e.User, "")
+	case 2:
+		return client.ExecCmd2(container, cmd, crate, e.User, "")
+	default:
+		return -1, fmt.Errorf("unknown exec version: %d", e.Version)
 	}
-
-	venv.Update(client, container, crate, e.User, "", cmd)
-
-	return ret, nil
 }
