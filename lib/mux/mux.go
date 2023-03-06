@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"log"
 	"math"
 	"sync"
 )
@@ -127,9 +126,9 @@ func (rcv *receiver) SplitCopy(name string, r io.Reader) (err error) {
 	msg := make([]byte, 0, 4096)
 
 	// log.Printf("RECV: %v %v", rcv.o, rcv.w)
-	defer func() {
-		log.Printf("RECV DONE: %v %v %s", rcv.o, rcv.w, err)
-	}()
+	// defer func() {
+	// 	log.Printf("RECV DONE: %v %v %s", rcv.o, rcv.w, err)
+	// }()
 
 	var buf []byte
 	for {
@@ -137,7 +136,7 @@ func (rcv *receiver) SplitCopy(name string, r io.Reader) (err error) {
 		if len(buf) == 0 {
 			buf = buffer[:]
 			n, err := r.Read(buf)
-			log.Printf("READ(%s): %d %v %s", name, n, buf[:n], err)
+			// log.Printf("READ(%s): %d %v %s", name, n, buf[:n], err)
 			if errors.Is(err, io.EOF) {
 				if chunkComplete {
 					return nil

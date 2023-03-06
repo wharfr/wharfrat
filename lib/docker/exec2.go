@@ -6,27 +6,14 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/moby/term"
-	"golang.org/x/net/context"
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/mux"
 	"wharfr.at/wharfrat/lib/rpc/proxy"
 )
-
-func state(c *client.Client, ctx context.Context, execID string) {
-	log.Printf("EXEC INSPECT")
-	inspect, err := c.ContainerExecInspect(ctx, execID)
-	if err != nil {
-		log.Printf("ERROR: failed to get exec response: %s", err)
-		return
-	}
-	log.Printf("running: %v exit: %d", inspect.Running, inspect.ExitCode)
-}
 
 func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user, workdir string) (int, error) {
 	container, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
@@ -86,7 +73,6 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	}
 
 	log.Printf("EXEC: ID=%s", execID)
-	state(c.c, c.ctx, execID)
 
 	startCheck := types.ExecStartCheck{
 		Tty: config.Tty,
@@ -96,8 +82,6 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 		return -1, err
 	}
 	defer attach.Close()
-
-	state(c.c, c.ctx, execID)
 
 	// TODO: this is horrible and hacky, and needs a better approach
 	pr, pw := io.Pipe()
@@ -117,8 +101,6 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	m.Recv(1, os.Stderr)
 	ctrl := proxy.NewClient(m.Connect(0))
 
-	state(c.c, c.ctx, execID)
-
 	processCh := make(chan error, 1)
 	go func() {
 		log.Printf("START mux.Process")
@@ -130,14 +112,11 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	if err := ctrl.Input(2, inFd); err != nil {
 		return -1, err
 	}
-	state(c.c, c.ctx, execID)
 	go func() {
 		w := m.Send(2)
 		io.Copy(w, os.Stdin)
 		w.Close()
 	}()
-
-	state(c.c, c.ctx, execID)
 
 	log.Printf("SETUP stdout")
 	if err := ctrl.Output(3, outFd); err != nil {
@@ -145,23 +124,17 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	}
 	m.Recv(3, rewrite(cmd[0], os.Stdout, id, crate))
 
-	state(c.c, c.ctx, execID)
-
 	log.Printf("SETUP stderr")
 	if err := ctrl.Output(4, errFd); err != nil {
 		return -1, err
 	}
 	m.Recv(4, os.Stderr)
 
-	state(c.c, c.ctx, execID)
-
 	log.Printf("START process")
 	if err := ctrl.Start(); err != nil {
 		return -1, err
 	}
 	m.Recv(4, os.Stderr)
-
-	state(c.c, c.ctx, execID)
 
 	sig := make(chan os.Signal, 10)
 	signal.Notify(sig)
@@ -170,13 +143,6 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 			if err := ctrl.Signal(s); err != nil {
 				log.Printf("Error sending signal: %s", err)
 			}
-		}
-	}()
-
-	go func() {
-		for {
-			time.Sleep(10 * time.Second)
-			state(c.c, c.ctx, execID)
 		}
 	}()
 
