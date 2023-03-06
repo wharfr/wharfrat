@@ -18,11 +18,15 @@ func (e *Exec) Execute(args []string) error {
 	// runtime.LockOSThread()
 
 	// Create a mux from stdin/stdout
-	m := mux.New(os.Stdin, os.Stdout)
+	m := mux.New("server", os.Stdin, os.Stdout)
+	defer m.Close()
 
 	processCh := make(chan error, 1)
 	go func() {
-		processCh <- m.Process()
+		err := m.Process()
+		if err != nil {
+			processCh <- err
+		}
 	}()
 
 	// Setup logging to use stderr (for now anyway)
@@ -45,12 +49,18 @@ func (e *Exec) Execute(args []string) error {
 	p.Wait()
 
 	log.Printf("RUN COMMAND")
-	if err := cmd.Run(); err != nil {
+	cmdCh := make(chan error, 1)
+	go func() {
+		cmdCh <- cmd.Run()
+	}()
+
+	log.Printf("WAIT FOR SOMETHING TO HAPPEN")
+	select {
+	case err := <-cmdCh:
+		log.Printf("COMMAND EXITED: %s", err)
+		return err
+	case err := <-processCh:
+		log.Printf("PROCESS STOPPED: %s", err)
 		return err
 	}
-	log.Printf("COMMAND EXITED")
-
-	os.Stdin.Close()
-
-	return <-processCh
 }

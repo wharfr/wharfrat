@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -19,8 +20,8 @@ func setup() (in, out *mux.Mux) {
 	ir, iw := io.Pipe()
 	or, ow := io.Pipe()
 
-	in = mux.New(ir, ow)
-	out = mux.New(or, iw)
+	in = mux.New("in", ir, ow)
+	out = mux.New("out", or, iw)
 
 	return
 }
@@ -133,4 +134,28 @@ func TestConnCloseIn(t *testing.T) {
 
 	assert.Equal(0, n)
 	assert.Equal(io.EOF, err)
+}
+
+func TestMuxClose(t *testing.T) {
+	assert := assert.New(t)
+
+	in, out := setup()
+
+	pCh := make(chan error, 1)
+	go func() {
+		pCh <- in.Process()
+	}()
+
+	err := out.Close()
+	assert.Nil(err)
+
+	const timeout = 10 * time.Millisecond
+	select {
+	case err := <-pCh:
+		assert.Nil(err)
+	case <-time.After(timeout):
+		assert.Fail("Process failed to return in %s", timeout)
+	}
+
+	assert.Fail("...")
 }

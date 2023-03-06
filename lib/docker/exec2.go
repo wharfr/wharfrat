@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -100,10 +101,17 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 
 	// TODO: this is horrible and hacky, and needs a better approach
 	pr, pw := io.Pipe()
-	go stdcopy.StdCopy(pw, os.Stderr, attach.Reader)
+	go func() {
+		_, err := stdcopy.StdCopy(pw, os.Stderr, attach.Reader)
+		pw.Close()
+		if err != nil {
+			// need to do something better with this error ...
+			log.Printf("ERROR: StdCopy failed: %s", err)
+		}
+	}()
 
 	log.Printf("CREATE MUX")
-	m := mux.New(pr, attach.Conn)
+	m := mux.New("client", pr, attach.Conn)
 
 	log.Printf("SETUP 0 & 1")
 	m.Recv(1, os.Stderr)
@@ -111,7 +119,7 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 
 	state(c.c, c.ctx, execID)
 
-	processCh := make(chan error)
+	processCh := make(chan error, 1)
 	go func() {
 		log.Printf("START mux.Process")
 		processCh <- m.Process()
@@ -155,13 +163,20 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 
 	state(c.c, c.ctx, execID)
 
+	sig := make(chan os.Signal, 10)
+	signal.Notify(sig)
 	go func() {
-		sig := make(chan os.Signal, 10)
-		signal.Notify(sig)
 		for s := range sig {
 			if err := ctrl.Signal(s); err != nil {
 				log.Printf("Error sending signal: %s", err)
 			}
+		}
+	}()
+
+	go func() {
+		for {
+			time.Sleep(10 * time.Second)
+			state(c.c, c.ctx, execID)
 		}
 	}()
 

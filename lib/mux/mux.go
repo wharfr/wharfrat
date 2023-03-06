@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"log"
 	"math"
 	"sync"
 )
@@ -116,7 +117,7 @@ func (rcv *receiver) Close(id uint32) {
 	delete(rcv.w, id)
 }
 
-func (rcv *receiver) SplitCopy(r io.Reader) error {
+func (rcv *receiver) SplitCopy(name string, r io.Reader) (err error) {
 	buffer := make([]byte, 4096)
 	chunkComplete := true
 	chunkSize := 0
@@ -126,9 +127,9 @@ func (rcv *receiver) SplitCopy(r io.Reader) error {
 	msg := make([]byte, 0, 4096)
 
 	// log.Printf("RECV: %v %v", rcv.o, rcv.w)
-	// defer func() {
-	// 	log.Printf("RECV DONE: %v %v", rcv.o, rcv.w)
-	// }()
+	defer func() {
+		log.Printf("RECV DONE: %v %v %s", rcv.o, rcv.w, err)
+	}()
 
 	var buf []byte
 	for {
@@ -136,7 +137,7 @@ func (rcv *receiver) SplitCopy(r io.Reader) error {
 		if len(buf) == 0 {
 			buf = buffer[:]
 			n, err := r.Read(buf)
-			// log.Printf("READ(%p): %d %v", rcv, n, buf[:n])
+			log.Printf("READ(%s): %d %v %s", name, n, buf[:n], err)
 			if errors.Is(err, io.EOF) {
 				if chunkComplete {
 					return nil
@@ -261,15 +262,17 @@ func (c *Conn) Close() error {
 }
 
 type Mux struct {
-	out io.Writer
-	in  io.Reader
-	r   *receiver
+	out  io.Writer
+	in   io.Reader
+	r    *receiver
+	name string
 }
 
-func New(in io.Reader, out io.Writer) *Mux {
+func New(name string, in io.Reader, out io.Writer) *Mux {
 	m := &Mux{
-		out: out,
-		in:  in,
+		out:  out,
+		in:   in,
+		name: name,
 	}
 	m.r = newReceiver(m)
 	return m
@@ -322,7 +325,7 @@ func (m *Mux) Read(id uint32) *io.PipeReader {
 }
 
 func (m *Mux) Process() error {
-	return m.r.SplitCopy(m.in)
+	return m.r.SplitCopy(m.name, m.in)
 }
 
 func (m *Mux) Close() error {
@@ -335,6 +338,14 @@ func (m *Mux) Close() error {
 		if err := c.Close(); err != nil {
 			return err
 		}
+	}
+	for _, w := range m.r.o {
+		if c, ok := w.(io.Closer); ok {
+			c.Close()
+		}
+	}
+	for _, w := range m.r.w {
+		w.Close()
 	}
 	return nil
 }

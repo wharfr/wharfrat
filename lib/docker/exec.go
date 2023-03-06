@@ -308,12 +308,13 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 
 		go func() {
 			_, err := io.Copy(stdout, attach.Reader)
+			log.Printf("Copy done (tty): %s", err)
 			outChan <- err
 		}()
 	} else {
 		go func() {
 			_, err := stdcopy.StdCopy(stdout, os.Stderr, attach.Reader)
-			log.Printf("Copy done")
+			log.Printf("Copy done: %s", err)
 			outChan <- err
 		}()
 	}
