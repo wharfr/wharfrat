@@ -2,12 +2,15 @@ package proxy
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/rpc"
+	"os"
 	"os/exec"
 	"syscall"
 
+	"golang.org/x/sys/unix"
 	"wharfr.at/wharfrat/lib/mux"
 )
 
@@ -99,12 +102,41 @@ func (p *Proxy) Output(args ProxyFDArgs, _ *ProxyNone) error {
 	}
 }
 
+func fdsToFile(fds [2]int) (a, b *os.File) {
+	unix.CloseOnExec(fds[0])
+	a = os.NewFile(uintptr(fds[0]), fmt.Sprintf("/dev/fd/%d", fds[0]))
+	unix.CloseOnExec(fds[1])
+	b = os.NewFile(uintptr(fds[1]), fmt.Sprintf("/dev/fd/%d", fds[1]))
+	return
+}
+
 func (p *Proxy) IO(args ProxyFDArgs, _ *ProxyNone) error {
 	if p.running() {
 		return errors.New("proxy running")
 	}
 	log.Printf("PROXY IO: id:%d fd:%d", args.ID, args.FD)
-	return errors.New("not implemented")
+	fds, err := unix.Socketpair(unix.AF_LOCAL, unix.SOCK_STREAM, 0)
+	if err != nil {
+		return err
+	}
+	log.Printf("SOCKET PAIR: %v", fds)
+	a, b := fdsToFile(fds)
+	log.Printf("FILES: %p, %p", a, b)
+	idx := int(args.FD - 3)
+	if len(p.cmd.ExtraFiles) <= idx {
+		p.cmd.ExtraFiles = append(p.cmd.ExtraFiles, make([]*os.File, idx+1-len(p.cmd.ExtraFiles))...)
+	}
+	p.cmd.ExtraFiles[idx] = a
+	conn := p.mux.Connect(args.ID)
+	go func() {
+		io.Copy(b, conn)
+		b.Close()
+	}()
+	go func() {
+		io.Copy(conn, b)
+		conn.Close()
+	}()
+	return nil
 }
 
 func (p *Proxy) Start(ProxyNone, *ProxyNone) error {

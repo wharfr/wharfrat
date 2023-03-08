@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/moby/term"
 	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/fds"
 	"wharfr.at/wharfrat/lib/mux"
 	"wharfr.at/wharfrat/lib/rpc/proxy"
 )
@@ -129,6 +130,33 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 		return -1, err
 	}
 	m.Recv(4, os.Stderr)
+
+	log.Printf("GET extra fds")
+	extra, err := fds.ExtraOpen()
+	if err != nil {
+		return 0, err
+	}
+
+	log.Printf("SETUP extra fds: %v", extra)
+	for i, fd := range extra {
+		id := uint32(5 + i)
+		if err := ctrl.IO(id, fd); err != nil {
+			return -1, err
+		}
+		f := os.NewFile(fd, fmt.Sprintf("/dev/fd/%d", fd))
+		if f == nil {
+			return -1, fmt.Errorf("failed to create file from FD: %d", fd)
+		}
+		conn := m.Connect(id)
+		go func() {
+			io.Copy(conn, f)
+			conn.Close()
+		}()
+		go func() {
+			io.Copy(f, conn)
+			f.Close()
+		}()
+	}
 
 	log.Printf("START process")
 	if err := ctrl.Start(); err != nil {
