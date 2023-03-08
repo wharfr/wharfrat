@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,6 +11,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/moby/term"
+	"golang.org/x/sys/unix"
+
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/fds"
 	"wharfr.at/wharfrat/lib/mux"
@@ -97,6 +100,7 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 
 	log.Printf("CREATE MUX")
 	m := mux.New("client", pr, attach.Conn)
+	defer m.Close()
 
 	log.Printf("SETUP 0 & 1")
 	m.Recv(1, os.Stderr)
@@ -147,14 +151,19 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 		if f == nil {
 			return -1, fmt.Errorf("failed to create file from FD: %d", fd)
 		}
+		defer f.Close()
 		conn := m.Connect(id)
 		go func() {
-			io.Copy(conn, f)
-			conn.Close()
+			_, err := io.Copy(conn, f)
+			log.Printf("f -> conn: %s %T %T %v", err, err, errors.Unwrap(err), errors.Is(err, unix.EBADF))
+			// TODO(jp3): This should close the send direction of conn
+			//conn.Close()
 		}()
 		go func() {
-			io.Copy(f, conn)
-			f.Close()
+			_, err := io.Copy(f, conn)
+			log.Printf("conn -> f: %s %T %T %v", err, err, errors.Unwrap(err), errors.Is(err, unix.EBADF))
+			// TODO(jp3): This should close the read direction of conn
+			//f.Close()
 		}()
 	}
 
@@ -164,6 +173,7 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	}
 	m.Recv(4, os.Stderr)
 
+	// Start forwarding signals
 	sig := make(chan os.Signal, 10)
 	signal.Notify(sig)
 	go func() {
@@ -178,6 +188,10 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	if err := <-processCh; err != nil {
 		return -1, fmt.Errorf("error copying output: %w", err)
 	}
+
+	// Stop forwarding signals
+	signal.Stop(sig)
+	close(sig)
 
 	log.Printf("EXEC INSPECT")
 	inspect, err := c.c.ContainerExecInspect(c.ctx, execID)
