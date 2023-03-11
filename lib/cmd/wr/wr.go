@@ -41,6 +41,8 @@ func Main() int {
 	}
 
 	config.Debug = opts.Debug
+	log.SetPrefix("WR: ")
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	if !opts.Debug {
 		log.SetOutput(ioutil.Discard)
 	}

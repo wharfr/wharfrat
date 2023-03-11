@@ -27,6 +27,7 @@ func Main() int {
 	opts := options{}
 
 	log.SetPrefix("WR-INIT: ")
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	parser := flags.NewParser(&opts, flags.Default|flags.PassAfterNonOption)
 

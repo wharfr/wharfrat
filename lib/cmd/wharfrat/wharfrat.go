@@ -32,6 +32,8 @@ func Main() int {
 
 	parser.CommandHandler = func(cmd flags.Commander, args []string) error {
 		config.Debug = opts.Debug
+		log.SetPrefix("WHARFRAT: ")
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
 		if !opts.Debug {
 			log.SetOutput(ioutil.Discard)
 		}

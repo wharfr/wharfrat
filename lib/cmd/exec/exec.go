@@ -48,7 +48,7 @@ func Main() int {
 	}
 
 	config.Debug = opts.Debug
-	log.SetPrefix("WR_EXEC: ")
+	log.SetPrefix("WR-EXEC: ")
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	if !opts.Debug {
 		log.SetOutput(ioutil.Discard)
