@@ -19,7 +19,11 @@ import (
 	"wharfr.at/wharfrat/lib/rpc/proxy"
 )
 
-func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user, workdir string) (int, error) {
+func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user, workdir string) (ret int, retErr error) {
+	defer func() {
+		log.Printf("ExecCmd2: %d %v", ret, retErr)
+	}()
+
 	container, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
 	if err != nil {
 		return -1, err
@@ -85,7 +89,10 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	if err != nil {
 		return -1, err
 	}
-	defer attach.Close()
+	defer func() {
+		attach.Close()
+		log.Printf("attach closed")
+	}()
 
 	// TODO: this is horrible and hacky, and needs a better approach
 	pr, pw := io.Pipe()
@@ -100,7 +107,10 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 
 	log.Printf("CREATE MUX")
 	m := mux.New("client", pr, attach.Conn)
-	defer m.Close()
+	defer func() {
+		m.Close()
+		log.Printf("MUX CLOSED")
+	}()
 
 	log.Printf("SETUP 0 & 1")
 	m.Recv(1, os.Stderr)
@@ -151,7 +161,10 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 		if f == nil {
 			return -1, fmt.Errorf("failed to create file from FD: %d", fd)
 		}
-		defer f.Close()
+		defer func() {
+			f.Close()
+			log.Printf("FD %d CLOSED", fd)
+		}()
 		conn := m.Connect(id)
 		go func() {
 			_, err := io.Copy(conn, f)
@@ -172,22 +185,28 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	m.Recv(4, os.Stderr)
 
 	// Start forwarding signals
+	log.Printf("SETUP SIGNALS")
 	sig := make(chan os.Signal, 10)
 	signal.Notify(sig)
 	go func() {
+		log.Printf("START SIGNALS")
 		for s := range sig {
 			if err := ctrl.Signal(s); err != nil {
 				log.Printf("Error sending signal: %s", err)
 			}
 		}
+		log.Printf("STOPPED SIGNALS")
 	}()
 
 	// Wait for m.Process to finish
+	log.Printf("WAIT FOR PROCESS")
 	if err := <-processCh; err != nil {
+		log.Printf("PROCESS ERROR: %s", err)
 		return -1, fmt.Errorf("error copying output: %w", err)
 	}
 
 	// Stop forwarding signals
+	log.Printf("STOP SIGNALS")
 	signal.Stop(sig)
 	close(sig)
 

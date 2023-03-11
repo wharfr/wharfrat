@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"log"
 	"math"
 	"sync"
 )
@@ -344,23 +345,27 @@ func (m *Mux) Process() error {
 }
 
 func (m *Mux) Close() error {
+	// for id, w := range m.r.o {
+	// 	if c, ok := w.(io.Closer); ok {
+	// 		log.Printf("CLOSE(%s): output %d", m.name, id)
+	// 		c.Close()
+	// 	}
+	// }
+	// for id, w := range m.r.w {
+	// 	log.Printf("CLOSE(%s): writer %d", m.name, id)
+	// 	w.Close()
+	// }
 	if c, ok := m.in.(io.Closer); ok {
+		log.Printf("CLOSE(%s): in", m.name)
 		if err := c.Close(); err != nil {
 			return err
 		}
 	}
 	if c, ok := m.out.(io.Closer); ok {
+		log.Printf("CLOSE(%s): out", m.name)
 		if err := c.Close(); err != nil {
 			return err
 		}
-	}
-	for _, w := range m.r.o {
-		if c, ok := w.(io.Closer); ok {
-			c.Close()
-		}
-	}
-	for _, w := range m.r.w {
-		w.Close()
 	}
 	return nil
 }

@@ -69,7 +69,9 @@ func Main() int {
 		return fatal("Failed to parse file %s: %s", name, err)
 	}
 
+	log.Printf("EXECUTE: %s", args)
 	ret, err := cfg.Execute(args)
+	log.Printf("STATUS: %d %v", ret, err)
 	if err != nil {
 		return fatal("Failed to execute file %s: %s", name, err)
 	}
