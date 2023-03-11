@@ -156,14 +156,12 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 		go func() {
 			_, err := io.Copy(conn, f)
 			log.Printf("f -> conn: %s %T %T %v", err, err, errors.Unwrap(err), errors.Is(err, unix.EBADF))
-			// TODO(jp3): This should close the send direction of conn
-			//conn.Close()
+			conn.CloseWrite()
 		}()
 		go func() {
 			_, err := io.Copy(f, conn)
 			log.Printf("conn -> f: %s %T %T %v", err, err, errors.Unwrap(err), errors.Is(err, unix.EBADF))
-			// TODO(jp3): This should close the read direction of conn
-			//f.Close()
+			conn.CloseRead()
 		}()
 	}
 
