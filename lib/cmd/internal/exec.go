@@ -58,6 +58,10 @@ func (e *Exec) Execute(args []string) error {
 		return err
 	case err := <-processCh:
 		log.Printf("PROCESS STOPPED: %s", err)
+		if cmd.Process != nil {
+			// If the process is running, then kill it before we exit
+			cmd.Process.Kill()
+		}
 		return err
 	}
 }
