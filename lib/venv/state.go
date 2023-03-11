@@ -131,6 +131,12 @@ func (s *state) createBinary(crate, path string) error {
 		os.Remove(refPath)
 		return err
 	}
+	if config.Namespace != "" {
+		if _, err := f.WriteString(fmt.Sprintf("namespace = \"%s\"\n", config.Namespace)); err != nil {
+			os.Remove(refPath)
+			return err
+		}
+	}
 	if _, err := f.WriteString(fmt.Sprintf("command = [\"%s\"]\n", path)); err != nil {
 		os.Remove(refPath)
 		return err
