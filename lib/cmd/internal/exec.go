@@ -57,7 +57,7 @@ func (e *Exec) Execute(args []string) error {
 	log.Printf("WAIT FOR SOMETHING TO HAPPEN")
 	select {
 	case err := <-cmdCh:
-		log.Printf("COMMAND EXITED: %s", err)
+		log.Printf("COMMAND FINISHED: %s", err)
 		return err
 	case err := <-processCh:
 		log.Printf("PROCESS STOPPED: %s", err)

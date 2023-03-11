@@ -1,8 +1,10 @@
 package internal
 
 import (
+	"errors"
 	"io/ioutil"
 	"log"
+	"os/exec"
 
 	"wharfr.at/wharfrat/lib/config"
 
@@ -42,6 +44,9 @@ func Main() int {
 	_, err := parser.Parse()
 	if flagErr, ok := err.(*flags.Error); ok && flagErr.Type == flags.ErrHelp {
 		return 0
+	} else if x := (*exec.ExitError)(nil); errors.As(err, &x) && x.ProcessState.Exited() {
+		log.Printf("COMMAND EXITED: %d", x.ProcessState.ExitCode())
+		return x.ProcessState.ExitCode()
 	} else if err != nil {
 		return 1
 	}
