@@ -29,9 +29,6 @@ func (e *Exec) Execute(args []string) error {
 		}
 	}()
 
-	// Setup logging to use stderr (for now anyway)
-	log.SetOutput(os.Stderr)
-
 	log.Printf("STARTING")
 
 	cmd := exec.Command(args[0], args[1:]...)

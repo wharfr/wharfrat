@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/exec"
 	"wharfr.at/wharfrat/lib/version"
 
@@ -46,6 +47,8 @@ func Main() int {
 		return 1
 	}
 
+	config.Debug = opts.Debug
+	log.SetPrefix("WR_EXEC: ")
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	if !opts.Debug {
 		log.SetOutput(ioutil.Discard)

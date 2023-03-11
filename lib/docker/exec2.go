@@ -52,7 +52,12 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 
 	log.Printf("User: %s, Workdir: %s, TTY: %v", user, workdir, tty)
 
-	cmds = append([]string{"/sbin/wr-init", "exec"}, cmds...)
+	if config.Debug {
+		cmds = append([]string{"/sbin/wr-init", "exec", "--debug"}, cmds...)
+	} else {
+		cmds = append([]string{"/sbin/wr-init", "exec"}, cmds...)
+	}
+	log.Printf("CMD: %s", cmds)
 
 	env, err := buildEnv(id, crate)
 	if err != nil {

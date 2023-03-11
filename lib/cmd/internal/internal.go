@@ -26,6 +26,8 @@ type options struct {
 func Main() int {
 	opts := options{}
 
+	log.SetPrefix("WR-INIT: ")
+
 	parser := flags.NewParser(&opts, flags.Default|flags.PassAfterNonOption)
 
 	parser.CommandHandler = func(cmd flags.Commander, args []string) error {
