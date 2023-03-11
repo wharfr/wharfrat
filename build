@@ -36,7 +36,7 @@ if [ -z "$WHARFRAT_NAME" ]; then
         wr="${plat_dist}/wr";
     fi
 
-    if ! "$wr" --auto-clean --force true 2> /dev/null; then
+    if ! "$wr" --namespace build --auto-clean --force true 2> /dev/null; then
         # We need to bootstrap the build by using docker directly
         mkdir -p dist/bootstrap
         image="$(egrep -o 'wharfr/dev(:[^"]*)?' .wrproject)"
@@ -63,7 +63,7 @@ if [ -z "$WHARFRAT_NAME" ]; then
     fi
 
     echo "re-run build ...";
-    exec "$wr" --auto-clean "./$(basename "$0")" "$@";
+    exec "$wr" --namespace build --auto-clean "./$(basename "$0")" "$@";
 fi
 
 if [ "${BUILD_WAIT_FOR_DOCKER}" == "true" ]; then
