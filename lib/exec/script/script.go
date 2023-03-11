@@ -15,6 +15,7 @@ type Script struct {
 	User      string   `toml:"user"`
 	AutoClean bool     `toml:"auto-clean"`
 	Version   int      `toml:"version"`
+	Namespace string   `toml:"namespace"`
 	Path      string
 	Meta      toml.MetaData
 }

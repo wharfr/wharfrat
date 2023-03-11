@@ -10,19 +10,20 @@ import (
 )
 
 type options struct {
-	Debug   bool `short:"d" long:"debug" description:"Show debug output"`
-	Env     `command:"env" description:"Manage wharfrat environment"`
-	Info    `command:"info" description:"Show information about current crate"`
-	List    `command:"list" description:"List existing containers"`
-	Login   `command:"login" description:"Cache credentials for a registry"`
-	Logout  `command:"logout" description:"Drop credentials for a registry"`
-	Prune   `command:"prune" description:"Remove containers for non-existent crates"`
-	Remove  `command:"remove" description:"Remove an existing container"`
-	Rm      Remove `command:"rm" description:"Remove an existing container"`
-	Run     `command:"run" description:"Run a command in a container"`
-	Start   `command:"start" description:"Start an existing container"`
-	Stop    `command:"stop" description:"Stop an existing container"`
-	Version `command:"version" description:"Show version of tool"`
+	Namespace string `short:"n" long:"namespace" description:"Namespace for the container"`
+	Debug     bool   `short:"d" long:"debug" description:"Show debug output"`
+	Env       `command:"env" description:"Manage wharfrat environment"`
+	Info      `command:"info" description:"Show information about current crate"`
+	List      `command:"list" description:"List existing containers"`
+	Login     `command:"login" description:"Cache credentials for a registry"`
+	Logout    `command:"logout" description:"Drop credentials for a registry"`
+	Prune     `command:"prune" description:"Remove containers for non-existent crates"`
+	Remove    `command:"remove" description:"Remove an existing container"`
+	Rm        Remove `command:"rm" description:"Remove an existing container"`
+	Run       `command:"run" description:"Run a command in a container"`
+	Start     `command:"start" description:"Start an existing container"`
+	Stop      `command:"stop" description:"Stop an existing container"`
+	Version   `command:"version" description:"Show version of tool"`
 }
 
 func Main() int {
@@ -31,6 +32,7 @@ func Main() int {
 	parser := flags.NewParser(&opts, flags.Default|flags.PassAfterNonOption)
 
 	parser.CommandHandler = func(cmd flags.Commander, args []string) error {
+		config.Namespace = opts.Namespace
 		config.Debug = opts.Debug
 		log.SetPrefix("WHARFRAT: ")
 		log.SetFlags(log.LstdFlags | log.Lshortfile)

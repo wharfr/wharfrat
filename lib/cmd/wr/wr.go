@@ -15,8 +15,9 @@ import (
 
 type options struct {
 	wharfrat.Run
-	Debug   bool `short:"d" long:"debug" description:"Show debug output"`
-	Version bool `long:"version" description:"Show version of tool"`
+	Namespace string `short:"n" long:"namespace" description:"Namespace for the container"`
+	Debug     bool   `short:"d" long:"debug" description:"Show debug output"`
+	Version   bool   `long:"version" description:"Show version of tool"`
 }
 
 func fatal(msg string, args ...interface{}) int {
@@ -39,6 +40,8 @@ func Main() int {
 	} else if err != nil {
 		return 1
 	}
+
+	config.Namespace = opts.Namespace
 
 	config.Debug = opts.Debug
 	log.SetPrefix("WR: ")

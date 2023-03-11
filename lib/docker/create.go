@@ -125,11 +125,12 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	}
 
 	labels := map[string]string{
-		label.Project: crate.ProjectPath(),
-		label.Crate:   crate.Name(),
-		label.Commit:  version.Commit(),
-		label.Config:  crate.Json(),
-		label.User:    usr.Username,
+		label.Project:   crate.ProjectPath(),
+		label.Crate:     crate.Name(),
+		label.Commit:    version.Commit(),
+		label.Config:    crate.Json(),
+		label.User:      usr.Username,
+		label.Namespace: config.Namespace,
 	}
 
 	projectDir := filepath.Dir(crate.ProjectPath())

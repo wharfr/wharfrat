@@ -34,6 +34,8 @@ func (e *ExecCfg) getCrate(ls config.LabelSource) (*config.Crate, error) {
 }
 
 func (e *ExecCfg) Execute(args []string) (int, error) {
+	config.Namespace = e.Namespace
+
 	client, err := docker.Connect()
 	if err != nil {
 		return 0, err

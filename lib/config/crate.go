@@ -20,6 +20,8 @@ import (
 	"wharfr.at/wharfrat/lib/vc"
 )
 
+var Namespace = ""
+
 type LabelSource interface {
 	ImageLabels(name string) (map[string]string, error)
 }
@@ -259,25 +261,26 @@ func (c *Crate) Name() string {
 
 func (c *Crate) ContainerName() string {
 	h := md5.New()
-	_, err := h.Write([]byte(c.project.path))
-	if err != nil {
+	if _, err := h.Write([]byte(c.project.path)); err != nil {
 		panic("Failed to write project path: " + err.Error())
 	}
-	_, err = h.Write([]byte(c.name))
-	if err != nil {
+	if _, err := h.Write([]byte(c.name)); err != nil {
 		panic("Failed to write crate name: " + err.Error())
 	}
-	_, err = h.Write([]byte(c.branch))
-	if err != nil {
+	if _, err := h.Write([]byte(c.branch)); err != nil {
 		panic("Failed to write crate branch: " + err.Error())
 	}
 	usr, err := user.Current()
 	if err != nil {
 		panic("Failed to get user information: " + err.Error())
 	}
-	_, err = h.Write([]byte(usr.Username))
-	if err != nil {
+	if _, err := h.Write([]byte(usr.Username)); err != nil {
 		panic("Failed to write username: " + err.Error())
+	}
+	if Namespace != "" {
+		if _, err := h.Write([]byte(Namespace)); err != nil {
+			panic("Failed to write namespace: " + err.Error())
+		}
 	}
 	hash := hex.EncodeToString(h.Sum(nil))
 	return "wr_" + hash

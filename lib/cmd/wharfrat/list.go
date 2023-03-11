@@ -34,12 +34,13 @@ type strState struct {
 }
 
 type listEntry struct {
-	name    string
-	project strState
-	crate   strState
-	image   string
-	state   string
-	branch  strState
+	name      string
+	project   strState
+	crate     strState
+	image     string
+	state     string
+	branch    strState
+	namespace string
 }
 
 type tree map[string]tree
@@ -123,7 +124,7 @@ func (l *List) Execute(args []string) error {
 	log.Printf("FOUND: %d", len(containers))
 
 	entries := []listEntry{}
-	maxName, maxProject, maxBranch, maxCrate, maxImage := 14, 14, 16, 5, 5
+	maxName, maxProject, maxBranch, maxCrate, maxImage, maxNamespace := 14, 14, 16, 5, 5, 9
 
 	projects := tree{}
 
@@ -133,6 +134,7 @@ func (l *List) Execute(args []string) error {
 		cfg := container.Labels[label.Config]
 		branch := container.Labels[label.Branch]
 		commit := container.Labels[label.Commit]
+		namespace := container.Labels[label.Namespace]
 
 		name := strings.TrimPrefix(container.Names[0], "/")
 		project := filepath.Dir(projectFile)
@@ -194,13 +196,18 @@ func (l *List) Execute(args []string) error {
 			maxImage = len(container.Image)
 		}
 
+		if len(namespace) > maxNamespace {
+			maxNamespace = len(namespace)
+		}
+
 		entries = append(entries, listEntry{
-			name:    name,
-			project: strState{project, projectState},
-			crate:   strState{crateName, crateState},
-			image:   container.Image,
-			state:   container.State,
-			branch:  strState{branch, branchState},
+			name:      name,
+			project:   strState{project, projectState},
+			crate:     strState{crateName, crateState},
+			image:     container.Image,
+			state:     container.State,
+			branch:    strState{branch, branchState},
+			namespace: namespace,
 		})
 	}
 
@@ -213,6 +220,7 @@ func (l *List) Execute(args []string) error {
 			fmt.Printf(" \"branch\": \"%s\",", entry.branch.str)
 			fmt.Printf(" \"crate\": \"%s\",", entry.crate.str)
 			fmt.Printf(" \"image\": \"%s\",", entry.image)
+			fmt.Printf(" \"namespace\": \"%s\"", entry.namespace)
 			fmt.Printf(" \"state\": \"%s\"", entry.state)
 			fmt.Printf("}")
 			if i+1 < len(entries) {
@@ -245,12 +253,14 @@ func (l *List) Execute(args []string) error {
 		fmt.Printf("\033[37;1m%-*s\033[0m | ", maxBranch, "Container Branch")
 		fmt.Printf("\033[37;1m%-*s\033[0m | ", maxCrate, "Crate")
 		fmt.Printf("\033[37;1m%-*s\033[0m | ", maxImage, "Image")
+		fmt.Printf("\033[37;1m%-*s\033[0m | ", maxNamespace, "Namespace")
 		fmt.Printf("\033[37;1m%s\033[0m\n", "Container State")
 		fmt.Printf("%s-+-", dashes(maxName))
 		fmt.Printf("%s-+-", dashes(maxProject))
 		fmt.Printf("%s-+-", dashes(maxBranch))
 		fmt.Printf("%s-+-", dashes(maxCrate))
 		fmt.Printf("%s-+-", dashes(maxImage))
+		fmt.Printf("%s-+-", dashes(maxNamespace))
 		fmt.Printf("%s\n", dashes(15))
 		for _, entry := range entries {
 			fmt.Printf("%-*s", maxName, entry.name)
@@ -262,6 +272,8 @@ func (l *List) Execute(args []string) error {
 			fmt.Printf("%s%-*s", entry.crate.state.fmt(), maxCrate, entry.crate.str)
 			fmt.Printf("\033[0m | ")
 			fmt.Printf("%-*s", maxImage, entry.image)
+			fmt.Printf("\033[0m | ")
+			fmt.Printf("%-*s", maxNamespace, entry.namespace)
 			fmt.Printf("\033[0m | ")
 			fmt.Printf("%s", entry.state)
 			fmt.Printf("\033[0m\n")
