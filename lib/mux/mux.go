@@ -125,14 +125,14 @@ func (rcv *receiver) SplitCopy(name string, r io.Reader) (err error) {
 	hdr := make([]byte, 0, headerSize)
 	msg := make([]byte, 0, 4096)
 
-	// log.Printf("RECV: %v %v", rcv.o, rcv.w)
+	// log.Printf("RECV(%s): %v %v", name, rcv.o, rcv.w)
 	// defer func() {
-	// 	log.Printf("RECV DONE: %v %v %s", rcv.o, rcv.w, err)
+	// 	log.Printf("RECV DONE(%s): %v %v %s", name, rcv.o, rcv.w, err)
 	// }()
 
 	var buf []byte
 	for {
-		// log.Printf("LOOP(%p): %d %v %d", rcv, len(buf), chunkComplete, chunkSize)
+		// log.Printf("LOOP(%s): %d %v %d", name, len(buf), chunkComplete, chunkSize)
 		if len(buf) == 0 {
 			buf = buffer[:]
 			n, err := r.Read(buf)
@@ -186,7 +186,7 @@ func (rcv *receiver) SplitCopy(name string, r io.Reader) (err error) {
 			chunkComplete = true
 			if isError {
 				// we need to report no error to writer
-				// log.Printf("SUCCESS: %d %p", id, rcv.w[id])
+				// log.Printf("SUCCESS(%s): %d %p", name, id, rcv.w[id])
 				if w := rcv.w[id]; w != nil {
 					// log.Printf("RESPONSE: %d %p", id, w)
 					w.response(nil)
@@ -195,7 +195,7 @@ func (rcv *receiver) SplitCopy(name string, r io.Reader) (err error) {
 			}
 			// this is a close
 			if w := rcv.o[id]; w != nil {
-				// log.Printf("CLOSE: %d", id)
+				// log.Printf("CLOSE(%s): %d", name, id)
 				if c, ok := w.(io.Closer); ok {
 					c.Close()
 				}
@@ -226,17 +226,25 @@ func (rcv *receiver) SplitCopy(name string, r io.Reader) (err error) {
 			continue
 		}
 
-		// log.Printf("MSG(%d): %p %v", id, rcv.o[id], msg)
-		if w := rcv.o[id]; w != nil {
-			// log.Printf("WRITE(%d): %v", id, msg)
-			_, err := w.Write(msg)
-			// log.Printf("WRITE %d RESULT: %s", id, err)
+		// log.Printf("MSG(%s): %d %p %v", name, id, rcv.o[id], msg)
+		w := rcv.o[id]
+
+		if w == nil {
+			// if no writer is found, then send an error response if we can
 			if rcv.m != nil {
-				// log.Printf("SEND ERROR: %d %s", id, err)
-				rcv.m.sendError(id, err)
+				rcv.m.sendError(id, io.ErrClosedPipe)
 			}
-			// delete(rcv.o, id)
+			continue
 		}
+
+		// log.Printf("WRITE(%s): %d %v", name, id, msg)
+		_, err := w.Write(msg)
+		// log.Printf("WRITE %d RESULT(%s): %s", id, name, err)
+		if rcv.m != nil {
+			// log.Printf("SEND ERROR(%s): %d %s", name, id, err)
+			rcv.m.sendError(id, err)
+		}
+		// delete(rcv.o, id)
 	}
 }
 
@@ -258,6 +266,14 @@ func (c *Conn) Read(b []byte) (int, error) {
 func (c *Conn) Close() error {
 	c.r.Close()
 	return c.w.Close()
+}
+
+func (c *Conn) CloseWrite() error {
+	return c.w.Close()
+}
+
+func (c *Conn) CloseRead() error {
+	return c.r.Close()
 }
 
 type Mux struct {
