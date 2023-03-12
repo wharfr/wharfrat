@@ -2,8 +2,6 @@ package wr
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 
 	"wharfr.at/wharfrat/lib/cmd/wharfrat"
@@ -42,13 +40,7 @@ func Main() int {
 	}
 
 	config.Namespace = opts.Namespace
-
-	config.Debug = opts.Debug
-	log.SetPrefix("WR: ")
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	if !opts.Debug {
-		log.SetOutput(ioutil.Discard)
-	}
+	config.SetupLogging(opts.Debug)
 
 	if opts.Version {
 		if err := version.ShowVersion(); err != nil {

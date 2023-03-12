@@ -2,11 +2,10 @@ package proxy
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 
 	"wharfr.at/wharfrat/lib/cmd/wharfrat"
+	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/version"
 
 	flags "github.com/jessevdk/go-flags"
@@ -15,8 +14,9 @@ import (
 
 type options struct {
 	wharfrat.Run
-	Debug   bool `short:"d" long:"debug" description:"Show debug output"`
-	Version bool `long:"version" description:"Show version of tool"`
+	Namespace string `short:"n" long:"namespace" description:"Namespace for the container"`
+	Debug     bool   `short:"d" long:"debug" description:"Show debug output"`
+	Version   bool   `long:"version" description:"Show version of tool"`
 }
 
 func fatal(msg string, args ...interface{}) int {
@@ -47,9 +47,8 @@ func Main(name string) int {
 		return 1
 	}
 
-	if !opts.Debug {
-		log.SetOutput(ioutil.Discard)
-	}
+	config.Namespace = opts.Namespace
+	config.SetupLogging(opts.Debug)
 
 	if opts.Version {
 		if err := version.ShowVersion(); err != nil {

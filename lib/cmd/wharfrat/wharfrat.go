@@ -1,9 +1,6 @@
 package wharfrat
 
 import (
-	"io/ioutil"
-	"log"
-
 	"wharfr.at/wharfrat/lib/config"
 
 	flags "github.com/jessevdk/go-flags"
@@ -33,12 +30,7 @@ func Main() int {
 
 	parser.CommandHandler = func(cmd flags.Commander, args []string) error {
 		config.Namespace = opts.Namespace
-		config.Debug = opts.Debug
-		log.SetPrefix("WHARFRAT: ")
-		log.SetFlags(log.LstdFlags | log.Lshortfile)
-		if !opts.Debug {
-			log.SetOutput(ioutil.Discard)
-		}
+		config.SetupLogging(opts.Debug)
 
 		if cmd == nil {
 			return nil

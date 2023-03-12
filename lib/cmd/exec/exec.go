@@ -2,7 +2,6 @@ package exec
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -47,12 +46,7 @@ func Main() int {
 		return 1
 	}
 
-	config.Debug = opts.Debug
-	log.SetPrefix("WR-EXEC: ")
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	if !opts.Debug {
-		log.SetOutput(ioutil.Discard)
-	}
+	config.SetupLogging(opts.Debug)
 
 	if opts.Version {
 		if err := version.ShowVersion(); err != nil {

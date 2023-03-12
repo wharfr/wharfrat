@@ -2,7 +2,6 @@ package internal
 
 import (
 	"errors"
-	"io/ioutil"
 	"log"
 	"os/exec"
 
@@ -26,16 +25,10 @@ type options struct {
 func Main() int {
 	opts := options{}
 
-	log.SetPrefix("WR-INIT: ")
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
 	parser := flags.NewParser(&opts, flags.Default|flags.PassAfterNonOption)
 
 	parser.CommandHandler = func(cmd flags.Commander, args []string) error {
-		config.Debug = opts.Debug
-		if !opts.Debug {
-			log.SetOutput(ioutil.Discard)
-		}
+		config.SetupLogging(opts.Debug)
 
 		if cmd == nil {
 			return nil
