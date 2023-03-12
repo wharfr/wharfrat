@@ -130,11 +130,13 @@ func (p *Proxy) IO(args ProxyFDArgs, _ *ProxyNone) error {
 	conn := p.mux.Connect(args.ID)
 	go func() {
 		io.Copy(b, conn)
-		b.Close()
+		unix.Shutdown(int(b.Fd()), unix.SHUT_WR)
+		conn.CloseRead()
 	}()
 	go func() {
 		io.Copy(conn, b)
-		conn.Close()
+		unix.Shutdown(int(b.Fd()), unix.SHUT_RD)
+		conn.CloseWrite()
 	}()
 	return nil
 }
