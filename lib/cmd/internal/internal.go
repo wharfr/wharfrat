@@ -2,6 +2,7 @@ package internal
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os/exec"
 
@@ -25,7 +26,7 @@ type options struct {
 func Main() int {
 	opts := options{}
 
-	parser := flags.NewParser(&opts, flags.Default|flags.PassAfterNonOption)
+	parser := flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash|flags.PassAfterNonOption)
 
 	parser.CommandHandler = func(cmd flags.Commander, args []string) error {
 		config.SetupLogging(opts.Debug)
@@ -39,6 +40,7 @@ func Main() int {
 
 	_, err := parser.Parse()
 	if flagErr, ok := err.(*flags.Error); ok && flagErr.Type == flags.ErrHelp {
+		fmt.Println(err)
 		return 0
 	} else if x := (*exec.ExitError)(nil); errors.As(err, &x) && x.ProcessState.Exited() {
 		log.Printf("COMMAND EXITED: %d", x.ProcessState.ExitCode())
