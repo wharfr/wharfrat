@@ -92,12 +92,10 @@ func (p *Proxy) Execute(args []string) error {
 	}
 
 	if p.Sync {
-		log.Printf("PROXY WAIT ...\n")
 		if err := p.Wait(logOut); err != nil {
 			log.SetOutput(logOut)
 			return err
 		}
-		log.Printf("PROXY RUN ...\n")
 	}
 
 	log.Printf("PROXY: sync: %v, dir: %s, cmd: %v", p.Sync, p.Workdir, args)

@@ -197,7 +197,7 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 		log.Printf("START SIGNALS")
 		for s := range sig {
 			if err := ctrl.Signal(s); err != nil {
-				log.Printf("Error sending signal: %s", err)
+				log.Printf("Error sending signal %d: %s", s, err)
 			}
 		}
 		log.Printf("STOPPED SIGNALS")
