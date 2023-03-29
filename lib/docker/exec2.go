@@ -92,9 +92,10 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	}
 	attach, err := c.c.ContainerExecAttach(c.ctx, execID, startCheck)
 	if err != nil {
-		return -1, err
+		return -1, fmt.Errorf("failed to exec container: %w", err)
 	}
 	defer func() {
+		log.Printf("!! close attach !!")
 		attach.Close()
 		log.Printf("attach closed")
 	}()
@@ -113,6 +114,7 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	log.Printf("CREATE MUX")
 	m := mux.New("client", pr, attach.Conn)
 	defer func() {
+		log.Printf("!! close mux !!")
 		m.Close()
 		log.Printf("MUX CLOSED")
 	}()
@@ -130,7 +132,8 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 
 	log.Printf("SETUP stdin")
 	if err := ctrl.Input(2, inFd); err != nil {
-		return -1, err
+		log.Printf("FAILED TO SETUP stdin: %s", err)
+		return -1, fmt.Errorf("failed to setup stdin: %w", err)
 	}
 	go func() {
 		w := m.Send(2)
@@ -140,27 +143,27 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 
 	log.Printf("SETUP stdout")
 	if err := ctrl.Output(3, outFd); err != nil {
-		return -1, err
+		return -1, fmt.Errorf("failed to setup stdout: %w", err)
 	}
 	m.Recv(3, rewrite(cmd[0], os.Stdout, id, crate))
 
 	log.Printf("SETUP stderr")
 	if err := ctrl.Output(4, errFd); err != nil {
-		return -1, err
+		return -1, fmt.Errorf("failed to setup stderr: %w", err)
 	}
 	m.Recv(4, os.Stderr)
 
 	log.Printf("GET extra fds")
 	extra, err := fds.ExtraOpen()
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to setup extra fds: %w", err)
 	}
 
 	log.Printf("SETUP extra fds: %v", extra)
 	for i, fd := range extra {
 		id := uint32(5 + i)
 		if err := ctrl.IO(id, fd); err != nil {
-			return -1, err
+			return -1, fmt.Errorf("failed to create mux channel: %w", err)
 		}
 		f := os.NewFile(fd, fmt.Sprintf("/dev/fd/%d", fd))
 		if f == nil {
@@ -185,7 +188,7 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 
 	log.Printf("START process")
 	if err := ctrl.Start(); err != nil {
-		return -1, err
+		return -1, fmt.Errorf("failed to start process: %w", err)
 	}
 	m.Recv(4, os.Stderr)
 
@@ -196,6 +199,7 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	go func() {
 		log.Printf("START SIGNALS")
 		for s := range sig {
+			log.Printf("FORWARD SIGNAL: %s", s)
 			if err := ctrl.Signal(s); err != nil {
 				log.Printf("Error sending signal %d: %s", s, err)
 			}

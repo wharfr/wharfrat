@@ -91,9 +91,10 @@ func (w *Writer) Close() error {
 }
 
 type receiver struct {
+	m *Mux
+	l sync.Mutex
 	o map[uint32]io.Writer
 	w map[uint32]*Writer
-	m *Mux
 }
 
 func newReceiver(m *Mux) *receiver {
@@ -105,16 +106,40 @@ func newReceiver(m *Mux) *receiver {
 }
 
 func (rcv *receiver) Add(id uint32, w io.Writer) {
+	rcv.l.Lock()
+	defer rcv.l.Unlock()
 	rcv.o[id] = w
 }
 
 func (rcv *receiver) addWriter(id uint32, w *Writer) {
+	rcv.l.Lock()
+	defer rcv.l.Unlock()
 	rcv.w[id] = w
 }
 
 func (rcv *receiver) Close(id uint32) {
+	rcv.l.Lock()
+	defer rcv.l.Unlock()
 	delete(rcv.o, id)
 	delete(rcv.w, id)
+}
+
+func (rcv *receiver) getO(id uint32) io.Writer {
+	rcv.l.Lock()
+	defer rcv.l.Unlock()
+	return rcv.o[id]
+}
+
+func (rcv *receiver) delO(id uint32) {
+	rcv.l.Lock()
+	defer rcv.l.Unlock()
+	delete(rcv.o, id)
+}
+
+func (rcv *receiver) getW(id uint32) *Writer {
+	rcv.l.Lock()
+	defer rcv.l.Unlock()
+	return rcv.w[id]
 }
 
 func (rcv *receiver) SplitCopy(name string, r io.Reader) (err error) {
@@ -188,19 +213,19 @@ func (rcv *receiver) SplitCopy(name string, r io.Reader) (err error) {
 			if isError {
 				// we need to report no error to writer
 				// log.Printf("SUCCESS(%s): %d %p", name, id, rcv.w[id])
-				if w := rcv.w[id]; w != nil {
+				if w := rcv.getW(id); w != nil {
 					// log.Printf("RESPONSE: %d %p", id, w)
 					w.response(nil)
 				}
 				continue
 			}
 			// this is a close
-			if w := rcv.o[id]; w != nil {
+			if w := rcv.getO(id); w != nil {
 				// log.Printf("CLOSE(%s): %d", name, id)
 				if c, ok := w.(io.Closer); ok {
 					c.Close()
 				}
-				delete(rcv.o, id)
+				rcv.delO(id)
 			}
 			continue
 		}
@@ -220,7 +245,7 @@ func (rcv *receiver) SplitCopy(name string, r io.Reader) (err error) {
 		if isError {
 			// report error to the writer
 			// log.Printf("ERROR: %d '%s' %p", id, msg, rcv.w[id])
-			if w := rcv.w[id]; w != nil {
+			if w := rcv.getW(id); w != nil {
 				// log.Printf("RESPONSE: %d %p", id, w)
 				w.response(errors.New(string(msg)))
 			}
@@ -228,7 +253,7 @@ func (rcv *receiver) SplitCopy(name string, r io.Reader) (err error) {
 		}
 
 		// log.Printf("MSG(%s): %d %p %v", name, id, rcv.o[id], msg)
-		w := rcv.o[id]
+		w := rcv.getO(id)
 
 		if w == nil {
 			// if no writer is found, then send an error response if we can

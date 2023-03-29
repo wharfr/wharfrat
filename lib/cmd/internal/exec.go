@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -8,6 +10,19 @@ import (
 	"wharfr.at/wharfrat/lib/mux"
 	"wharfr.at/wharfrat/lib/rpc/proxy"
 )
+
+type slipWriter struct {
+	w io.Writer
+}
+
+func slip(w io.Writer) slipWriter {
+	return slipWriter{w: w}
+}
+
+func (s slipWriter) Write(b []byte) (int, error) {
+	_, _ = s.w.Write(b)
+	return len(b), nil
+}
 
 type Exec struct {
 }
@@ -17,9 +32,23 @@ func (e *Exec) Execute(args []string) error {
 	// runtime.GOMAXPROCS(1)
 	// runtime.LockOSThread()
 
+	f, err := os.OpenFile("/wr-init.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open log file: %w", err)
+	}
+	defer f.Close()
+
+	log.SetOutput(io.MultiWriter(slip(os.Stderr), f))
+
+	log.Printf("----------------------------------------------")
+
 	// Create a mux from stdin/stdout
 	m := mux.New("server", os.Stdin, os.Stdout)
-	defer m.Close()
+	defer func() {
+		log.Printf("close mux")
+		m.Close()
+		log.Printf("mux closed")
+	}()
 
 	processCh := make(chan error, 1)
 	go func() {
