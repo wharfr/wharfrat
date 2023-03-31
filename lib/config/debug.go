@@ -32,6 +32,10 @@ func SetupLogging(debug bool) {
 	name := filepath.Base(os.Args[0])
 	log.SetPrefix(fmt.Sprintf("%s: ", strings.ToUpper(name)))
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	if !debug {
+		// Only enable log output if debug enabled
+		return
+	}
 	var c *color.Color
 	switch strings.ToLower(name) {
 	case "wr", "wharfrat":
@@ -43,9 +47,7 @@ func SetupLogging(debug bool) {
 	}
 	// force color on, even if stdout isn't a terminal
 	c.EnableColor()
-	if debug {
-		log.SetOutput(&coloured{c: c})
-	}
+	log.SetOutput(&coloured{c: c})
 }
 
 func init() {

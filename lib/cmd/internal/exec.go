@@ -38,7 +38,7 @@ func (e *Exec) Execute(args []string) error {
 	}
 	defer f.Close()
 
-	log.SetOutput(io.MultiWriter(slip(os.Stderr), f))
+	log.SetOutput(io.MultiWriter(slip(log.Writer()), f))
 
 	log.Printf("----------------------------------------------")
 
