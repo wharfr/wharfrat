@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/creack/multio"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/moby/term"
@@ -16,6 +15,7 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/fds"
+	"wharfr.at/wharfrat/lib/mux"
 	"wharfr.at/wharfrat/lib/rpc/proxy"
 )
 
@@ -112,11 +112,7 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	}()
 
 	log.Printf("CREATE MUX")
-	// m := mux.New("client", pr, attach.Conn)
-	m, err := multio.NewMultiplexer(pr, attach.Conn)
-	if err != nil {
-		return 0, fmt.Errorf("failed to create mux: %w", err)
-	}
+	m := mux.New("client", pr, attach.Conn)
 	defer func() {
 		log.Printf("!! close mux !!")
 		m.Close()
@@ -124,21 +120,15 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	}()
 
 	processCh := make(chan error, 1)
-	// go func() {
-	// 	log.Printf("START mux.Process")
-	// 	processCh <- m.Process()
-	// 	log.Printf("END mux.Process")
-	// }()
+	go func() {
+		log.Printf("START mux.Process")
+		processCh <- m.Process()
+		log.Printf("END mux.Process")
+	}()
 
 	log.Printf("SETUP 0 & 1")
-	go func() {
-		r := m.NewReader(1)
-		io.Copy(os.Stderr, r)
-		r.Close()
-		processCh <- nil
-	}()
-	// m.Recv(1, os.Stderr)
-	ctrl := proxy.NewClient(m.NewReadWriter(0))
+	m.Recv(1, os.Stderr)
+	ctrl := proxy.NewClient(m.Connect(0))
 
 	log.Printf("SETUP stdin")
 	if err := ctrl.Input(2, inFd); err != nil {
@@ -146,7 +136,7 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 		return -1, fmt.Errorf("failed to setup stdin: %w", err)
 	}
 	go func() {
-		w := m.NewWriter(2)
+		w := m.Send(2)
 		io.Copy(w, os.Stdin)
 		w.Close()
 	}()
@@ -155,23 +145,13 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	if err := ctrl.Output(3, outFd); err != nil {
 		return -1, fmt.Errorf("failed to setup stdout: %w", err)
 	}
-	// m.Recv(3, rewrite(cmd[0], os.Stdout, id, crate))
-	go func() {
-		r := m.NewReader(3)
-		io.Copy(rewrite(cmd[0], os.Stdout, id, crate), r)
-		r.Close()
-	}()
+	m.Recv(3, rewrite(cmd[0], os.Stdout, id, crate))
 
 	log.Printf("SETUP stderr")
 	if err := ctrl.Output(4, errFd); err != nil {
 		return -1, fmt.Errorf("failed to setup stderr: %w", err)
 	}
-	// m.Recv(4, os.Stderr)
-	go func() {
-		r := m.NewReader(4)
-		io.Copy(os.Stderr, r)
-		r.Close()
-	}()
+	m.Recv(4, os.Stderr)
 
 	log.Printf("GET extra fds")
 	extra, err := fds.ExtraOpen()
@@ -193,16 +173,16 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 			f.Close()
 			log.Printf("FD %d CLOSED", fd)
 		}()
-		conn := m.NewReadWriter(int(id))
+		conn := m.Connect(id)
 		go func() {
 			_, err := io.Copy(conn, f)
 			log.Printf("f -> conn: %s %T %T %v", err, err, errors.Unwrap(err), errors.Is(err, unix.EBADF))
-			conn.WriteCloser.Close()
+			conn.CloseWrite()
 		}()
 		go func() {
 			_, err := io.Copy(f, conn)
 			log.Printf("conn -> f: %s %T %T %v", err, err, errors.Unwrap(err), errors.Is(err, unix.EBADF))
-			conn.ReadCloser.Close()
+			conn.CloseRead()
 		}()
 	}
 
@@ -210,6 +190,7 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 	if err := ctrl.Start(); err != nil {
 		return -1, fmt.Errorf("failed to start process: %w", err)
 	}
+	m.Recv(4, os.Stderr)
 
 	// Start forwarding signals
 	log.Printf("SETUP SIGNALS")
