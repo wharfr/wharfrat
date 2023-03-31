@@ -119,16 +119,16 @@ func (c *Connection) ExecCmd2(id string, cmd []string, crate *config.Crate, user
 		log.Printf("MUX CLOSED")
 	}()
 
-	log.Printf("SETUP 0 & 1")
-	m.Recv(1, os.Stderr)
-	ctrl := proxy.NewClient(m.Connect(0))
-
 	processCh := make(chan error, 1)
 	go func() {
 		log.Printf("START mux.Process")
 		processCh <- m.Process()
 		log.Printf("END mux.Process")
 	}()
+
+	log.Printf("SETUP 0 & 1")
+	m.Recv(1, os.Stderr)
+	ctrl := proxy.NewClient(m.Connect(0))
 
 	log.Printf("SETUP stdin")
 	if err := ctrl.Input(2, inFd); err != nil {
