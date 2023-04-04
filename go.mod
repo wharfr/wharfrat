@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/docker/distribution v2.8.1+incompatible
-	github.com/docker/docker v20.10.23+incompatible
+	github.com/docker/docker v20.10.24+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/mattn/go-shellwords v1.0.12
