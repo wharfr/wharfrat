@@ -47,7 +47,7 @@ if [ -z "$WHARFRAT_NAME" ]; then
                 -w /go/src/wharfr.at/wharfrat \
                 -e "CGO_ENABLED=0" \
                 "${image}" \
-                go build -a -tags netgo -installsuffix . \
+                go build -a -tags netgo -buildvcs=false -installsuffix . \
                     -o /go/src/wharfr.at/wharfrat/lib/self/dist/bootstrap/wr-linux wharfr.at/wharfrat/cmd/wr
         fi
         echo "bootstrap ...";
@@ -57,7 +57,7 @@ if [ -z "$WHARFRAT_NAME" ]; then
             -e "CGO_ENABLED=${CGO_ENABLED}" \
             -e "GOOS=${GOOS}" \
             "${image}" \
-            go build -a -tags "netgo bootstrap" -installsuffix . \
+            go build -a -tags "netgo bootstrap" -buildvcs=false -installsuffix . \
                 -o /go/src/wharfr.at/wharfrat/dist/bootstrap/wr wharfr.at/wharfrat/cmd/wr
         wr="$(pwd)/dist/bootstrap/wr";
     fi
