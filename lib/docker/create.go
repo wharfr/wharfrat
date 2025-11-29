@@ -255,14 +255,14 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	log.Printf("SELF COPIED: %s", cid)
 
-	if err := c.c.ContainerStart(c.ctx, cid, types.ContainerStartOptions{}); err != nil {
+	if err := c.c.ContainerStart(c.ctx, cid, container.StartOptions{}); err != nil {
 		return "", err
 	}
 
 	log.Printf("STARTED: %s", cid)
 
 	if err := c.setup(cid, crate); err != nil {
-		c.EnsureRemoved(crate.ContainerName())
+		_ = c.EnsureRemoved(crate.ContainerName())
 		return "", err
 	}
 

@@ -14,8 +14,9 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/registry"
+	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/client"
 	"golang.org/x/net/context"
 )
@@ -51,7 +52,7 @@ func (c *Connection) Close() error {
 }
 
 func (c *Connection) List() ([]types.Container, error) {
-	all, err := c.c.ContainerList(c.ctx, types.ContainerListOptions{
+	all, err := c.c.ContainerList(c.ctx, container.ListOptions{
 		All:     true,
 		Filters: filters.NewArgs(filters.Arg("label", label.Project)),
 	})
@@ -88,7 +89,7 @@ func (c *Connection) GetContainer(name string) (*types.ContainerJSON, error) {
 }
 
 func (c *Connection) Start(id string) error {
-	return c.c.ContainerStart(c.ctx, id, types.ContainerStartOptions{})
+	return c.c.ContainerStart(c.ctx, id, container.StartOptions{})
 }
 
 func (c *Connection) Unpause(id string) error {
@@ -100,7 +101,7 @@ func (c *Connection) Stop(id string) error {
 }
 
 func (c *Connection) Remove(id string, force bool) error {
-	return c.c.ContainerRemove(c.ctx, id, types.ContainerRemoveOptions{
+	return c.c.ContainerRemove(c.ctx, id, container.RemoveOptions{
 		Force: force,
 	})
 }
@@ -186,7 +187,7 @@ func (c *Connection) Login(addr, user, pass string) (*registry.AuthConfig, error
 	return &authConfig, nil
 }
 
-func (c *Connection) Info() (types.Info, error) {
+func (c *Connection) Info() (system.Info, error) {
 	return c.c.Info(c.ctx)
 }
 
@@ -198,8 +199,8 @@ func (c *Connection) ImageLabels(name string) (map[string]string, error) {
 		}
 		return nil, err
 	}
-	log.Printf("IMAGE LABELS (%s): %#v", name, info.ContainerConfig.Labels)
-	return info.ContainerConfig.Labels, nil
+	log.Printf("IMAGE LABELS (%s): %#v", name, info.Config.Labels)
+	return info.Config.Labels, nil
 }
 
 func (c *Connection) GetImage(name string) (*types.ImageInspect, error) {

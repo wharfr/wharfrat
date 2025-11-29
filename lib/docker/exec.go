@@ -14,6 +14,7 @@ import (
 	"wharfr.at/wharfrat/lib/config"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/moby/term"
@@ -152,12 +153,12 @@ func rewrite(cmd string, out io.Writer, id string, crate *config.Crate) io.Write
 }
 
 func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user, workdir string) (int, error) {
-	container, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
+	ctr, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
 	if err != nil {
 		return -1, err
 	}
 
-	cmds := []string(container.Config.Entrypoint)
+	cmds := []string(ctr.Config.Entrypoint)
 	cmds = append(cmds, cmd...)
 
 	log.Printf("CMD: %v", cmds)
@@ -252,7 +253,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 			if err != nil {
 				return err
 			}
-			err = c.c.ContainerExecResize(c.ctx, execID, types.ResizeOptions{
+			err = c.c.ContainerExecResize(c.ctx, execID, container.ResizeOptions{
 				Height: uint(size.Height),
 				Width:  uint(size.Width),
 			})
@@ -304,7 +305,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		}
 		defer term.RestoreTerminal(outFd, outState)
 
-		attach.Conn.Write([]byte("PROXY RUN\n"))
+		_, _ = attach.Conn.Write([]byte("PROXY RUN\n"))
 
 		go func() {
 			_, err := io.Copy(stdout, attach.Reader)
@@ -319,8 +320,8 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 	}
 
 	go func() {
-		io.Copy(attach.Conn, os.Stdin)
-		attach.CloseWrite()
+		_, _ = io.Copy(attach.Conn, os.Stdin)
+		_ = attach.CloseWrite()
 	}()
 
 	// Wait for copies to finish

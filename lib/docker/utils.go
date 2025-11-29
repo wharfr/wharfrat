@@ -3,7 +3,6 @@ package docker
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -54,17 +53,17 @@ func (c *Connection) run(id string, cmd []string, env map[string]string, stdin i
 
 	if stdin != nil {
 		go func() {
-			io.Copy(attach.Conn, stdin)
-			attach.CloseWrite()
+			_, _ = io.Copy(attach.Conn, stdin)
+			_ = attach.CloseWrite()
 		}()
 	}
 
 	if stdout == nil {
-		stdout = ioutil.Discard
+		stdout = io.Discard
 	}
 
 	if stderr == nil {
-		stderr = ioutil.Discard
+		stderr = io.Discard
 	}
 
 	outChan := make(chan error)
