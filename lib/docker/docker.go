@@ -13,6 +13,8 @@ import (
 	"wharfr.at/wharfrat/lib/docker/label"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"golang.org/x/net/context"
@@ -94,7 +96,7 @@ func (c *Connection) Unpause(id string) error {
 }
 
 func (c *Connection) Stop(id string) error {
-	return c.c.ContainerStop(c.ctx, id, nil)
+	return c.c.ContainerStop(c.ctx, id, container.StopOptions{})
 }
 
 func (c *Connection) Remove(id string, force bool) error {
@@ -163,8 +165,8 @@ func (c *Connection) calcWorkdirSingle(id, user, workdir string, crate *config.C
 	return "", fmt.Errorf("invalid working-dir: '%s'", workdir)
 }
 
-func (c *Connection) Login(addr, user, pass string) (*types.AuthConfig, error) {
-	authConfig := types.AuthConfig{
+func (c *Connection) Login(addr, user, pass string) (*registry.AuthConfig, error) {
+	authConfig := registry.AuthConfig{
 		ServerAddress: addr,
 		Username:      user,
 		Password:      pass,

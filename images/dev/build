@@ -2,4 +2,4 @@
 
 cd "$(dirname "$0")"
 
-exec docker buildx build --platform linux/amd64,linux/arm64 --pull -t wharfr/dev:1.19.1 -f Dockerfile --push .
+exec docker buildx build --platform linux/amd64,linux/arm64 --pull -t wharfr/dev:1.25.4 -f Dockerfile --push .
