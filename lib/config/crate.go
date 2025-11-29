@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -81,7 +80,7 @@ func LocateCrate(start string) (string, error) {
 		return "", err
 	}
 	defer f.Close()
-	data, err := ioutil.ReadAll(f)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return "", err
 	}
@@ -241,6 +240,7 @@ func (c *Crate) SetDefaults(ls LabelSource) error {
 		// First default is the user's current shell
 		c.Shell = os.Getenv("SHELL")
 	}
+
 	if c.Shell == "" {
 		// Final fallback is /bin/sh
 		c.Shell = "/bin/sh"

@@ -1,8 +1,9 @@
 package wr
 
 import (
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 
@@ -23,6 +24,7 @@ func fatal(msg string, args ...interface{}) int {
 	fmt.Fprintf(os.Stderr, "ERROR: ")
 	fmt.Fprintf(os.Stderr, msg, args...)
 	fmt.Fprintln(os.Stderr)
+
 	return 1
 }
 
@@ -34,21 +36,22 @@ func Main() int {
 	parser.Usage = "[OPTIONS] [cmd [args...]]"
 
 	args, err := parser.Parse()
-	if flagErr, ok := err.(*flags.Error); ok && flagErr.Type == flags.ErrHelp {
+	if flagErr := (*flags.Error)(nil); errors.As(err, &flagErr) && flagErr.Type == flags.ErrHelp {
 		return 0
 	} else if err != nil {
 		return 1
 	}
 
 	config.Debug = opts.Debug
-	if !opts.Debug {
-		log.SetOutput(ioutil.Discard)
+	if !config.Debug {
+		log.SetOutput(io.Discard)
 	}
 
 	if opts.Version {
 		if err := version.ShowVersion(); err != nil {
 			return fatal("%s", err)
 		}
+
 		return 0
 	}
 
