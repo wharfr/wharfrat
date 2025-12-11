@@ -1,0 +1,87 @@
+linters:
+  enable-all: false
+  enable: []
+
+  disable-all: false
+  disable:
+    - exhaustruct
+    - err113
+    - gochecknoglobals
+    - varnamelen
+    - mnd
+    - forcetypeassert
+    - depguard
+    - nonamedreturns
+
+  presets:
+    - bugs
+    - comment
+    - complexity
+    - error
+    - format
+    - import
+    - metalinter
+    - module
+    - performance
+    - sql
+    - style
+    - test
+    - unused
+
+
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - blank
+      - dot
+      - localmodule
+
+    skip-generated: false
+
+  ireturn:
+    allow:
+      - anon
+      - error
+      - empty
+      - stdlib
+
+  gocritic:
+    disabled-checks:
+      # This check doesn't play well with cgo, see https://github.com/go-critic/go-critic/issues/897
+      - dupSubExpr
+
+  gosec:
+    excludes:
+      # Using random numbers doesn't mean that they should be cryptographically secure
+      - G404
+
+  wsl:
+    allow-cuddle-used-in-block: true
+    force-err-cuddling: true
+
+  wrapcheck:
+    ignoreInterfaceRegexps:
+      - .*
+
+  nlreturn:
+    block-size: 2
+
+  testpackage:
+    allow-packages:
+      - pytesting
+
+  paralleltest:
+    ignore-missing: true
+
+  funlen:
+    ignore-comments: true
+
+issues:
+  exclude-generated: strict
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+  uniq-by-line: false

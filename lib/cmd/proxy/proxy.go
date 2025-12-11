@@ -1,16 +1,17 @@
 package proxy
 
 import (
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 
-	"wharfr.at/wharfrat/lib/cmd/wharfrat"
-	"wharfr.at/wharfrat/lib/version"
-
 	flags "github.com/jessevdk/go-flags"
 	shellwords "github.com/mattn/go-shellwords"
+
+	"wharfr.at/wharfrat/lib/cmd/wharfrat"
+	"wharfr.at/wharfrat/lib/version"
 )
 
 type options struct {
@@ -23,6 +24,7 @@ func fatal(msg string, args ...interface{}) int {
 	fmt.Fprintf(os.Stderr, "ERROR: ")
 	fmt.Fprintf(os.Stderr, msg, args...)
 	fmt.Fprintln(os.Stderr)
+
 	return 1
 }
 
@@ -41,20 +43,21 @@ func Main(name string) int {
 	}
 
 	_, err = parser.ParseArgs(options)
-	if flagErr, ok := err.(*flags.Error); ok && flagErr.Type == flags.ErrHelp {
+	if flagErr := (*flags.Error)(nil); errors.As(err, &flagErr) && flagErr.Type == flags.ErrHelp {
 		return 0
 	} else if err != nil {
 		return 1
 	}
 
 	if !opts.Debug {
-		log.SetOutput(ioutil.Discard)
+		log.SetOutput(io.Discard)
 	}
 
 	if opts.Version {
 		if err := version.ShowVersion(); err != nil {
 			return fatal("%s", err)
 		}
+
 		return 0
 	}
 

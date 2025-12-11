@@ -49,14 +49,16 @@ func (i *Info) Execute(args []string) error {
 		cfg = container.Config.Labels[label.Config]
 		branch = container.Config.Labels[label.Branch]
 
-		v4 := container.NetworkSettings.IPAddress
-		v6 := container.NetworkSettings.GlobalIPv6Address
+		if network := container.NetworkSettings.Networks["bridge"]; network != nil {
+			v4 := network.IPAddress
+			v6 := network.GlobalIPv6Address
 
-		addr = v4
-		if v4 != "" && v6 != "" {
-			addr = v4 + ", " + v6
-		} else if v6 != "" {
-			addr = v6
+			addr = v4
+			if v4 != "" && v6 != "" {
+				addr = v4 + ", " + v6
+			} else if v6 != "" {
+				addr = v6
+			}
 		}
 
 		status = container.State.Status

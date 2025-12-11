@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/registry"
 )
 
 const authFilename = "auth.json"
@@ -23,7 +23,7 @@ func LoadAuth() (Auth, error) {
 	return auth, nil
 }
 
-func (a Auth) Set(authConfig *types.AuthConfig) error {
+func (a Auth) Set(authConfig *registry.AuthConfig) error {
 	buf, err := json.Marshal(authConfig)
 	if err != nil {
 		return err

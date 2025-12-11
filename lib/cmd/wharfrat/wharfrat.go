@@ -1,7 +1,8 @@
 package wharfrat
 
 import (
-	"io/ioutil"
+	"errors"
+	"io"
 	"log"
 
 	"wharfr.at/wharfrat/lib/config"
@@ -32,8 +33,8 @@ func Main() int {
 
 	parser.CommandHandler = func(cmd flags.Commander, args []string) error {
 		config.Debug = opts.Debug
-		if !opts.Debug {
-			log.SetOutput(ioutil.Discard)
+		if !config.Debug {
+			log.SetOutput(io.Discard)
 		}
 
 		if cmd == nil {
@@ -44,7 +45,7 @@ func Main() int {
 	}
 
 	_, err := parser.Parse()
-	if flagErr, ok := err.(*flags.Error); ok && flagErr.Type == flags.ErrHelp {
+	if flagErr := (*flags.Error)(nil); errors.As(err, &flagErr) && flagErr.Type == flags.ErrHelp {
 		return 0
 	} else if err != nil {
 		return 1

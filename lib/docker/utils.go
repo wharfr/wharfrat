@@ -3,14 +3,14 @@ package docker
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
 	"wharfr.at/wharfrat/lib/config"
 
-	"github.com/docker/distribution/reference"
-	"github.com/docker/docker/api/types"
+	"github.com/distribution/reference"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/docker/registry"
@@ -23,7 +23,7 @@ func (c *Connection) run(id string, cmd []string, env map[string]string, stdin i
 		environ = append(environ, key+"="+value)
 	}
 
-	config := types.ExecConfig{
+	config := container.ExecOptions{
 		AttachStdin:  stdin != nil,
 		AttachStdout: true,
 		AttachStderr: true,
@@ -43,7 +43,7 @@ func (c *Connection) run(id string, cmd []string, env map[string]string, stdin i
 		return 0, fmt.Errorf("got empty exec ID")
 	}
 
-	startCheck := types.ExecStartCheck{
+	startCheck := container.ExecAttachOptions{
 		Tty: false,
 	}
 	attach, err := c.c.ContainerExecAttach(c.ctx, execID, startCheck)
@@ -54,17 +54,17 @@ func (c *Connection) run(id string, cmd []string, env map[string]string, stdin i
 
 	if stdin != nil {
 		go func() {
-			io.Copy(attach.Conn, stdin)
-			attach.CloseWrite()
+			_, _ = io.Copy(attach.Conn, stdin)
+			_ = attach.CloseWrite()
 		}()
 	}
 
 	if stdout == nil {
-		stdout = ioutil.Discard
+		stdout = io.Discard
 	}
 
 	if stderr == nil {
-		stderr = ioutil.Discard
+		stderr = io.Discard
 	}
 
 	outChan := make(chan error)
@@ -119,7 +119,7 @@ func (c *Connection) pullImage(name string) error {
 		log.Printf("Failed to load saved auth: %s", err)
 	}
 
-	options := types.ImageCreateOptions{
+	options := image.CreateOptions{
 		RegistryAuth: auth[authName],
 		Platform:     "linux",
 	}

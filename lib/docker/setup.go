@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	shellwords "github.com/mattn/go-shellwords"
 	"wharfr.at/wharfrat/lib/config"
 )
@@ -125,7 +125,7 @@ func (c *Connection) installTarball(id string, base, src, dst string) error {
 	}
 	defer f.Close()
 
-	options := types.CopyToContainerOptions{}
+	options := container.CopyToContainerOptions{}
 	return c.c.CopyToContainer(c.ctx, id, dst, f, options)
 }
 

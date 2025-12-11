@@ -2,7 +2,7 @@ package self
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 )
 
@@ -12,10 +12,12 @@ func GetLinux() ([]byte, error) {
 		return nil, fmt.Errorf("failed to get self: %w", err)
 	}
 	defer self.Close()
-	selfData, err := ioutil.ReadAll(self)
+
+	selfData, err := io.ReadAll(self)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read self: %w", err)
 	}
+
 	return selfData, nil
 }
 
