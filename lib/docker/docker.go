@@ -2,6 +2,7 @@ package docker
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -9,16 +10,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"wharfr.at/wharfrat/lib/config"
-	"wharfr.at/wharfrat/lib/docker/label"
-
-	"github.com/docker/docker/api/types"
+	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/client"
-	"golang.org/x/net/context"
+
+	"wharfr.at/wharfrat/lib/config"
+	"wharfr.at/wharfrat/lib/docker/label"
 )
 
 type Connection struct {
@@ -28,19 +29,24 @@ type Connection struct {
 
 func Connect() (*Connection, error) {
 	host := config.Local().DockerURL
+
 	opts := []client.Opt{}
 	if host != "" {
 		opts = append(opts, client.WithHost(host))
 	}
+
 	c, err := client.NewClientWithOpts(opts...)
 	if err != nil {
 		return nil, err
 	}
+
 	ctx := context.Background()
 	before := c.ClientVersion()
 	c.NegotiateAPIVersion(ctx)
 	after := c.ClientVersion()
+
 	log.Printf("API: before: %s, after: %s", before, after)
+
 	return &Connection{
 		c:   c,
 		ctx: ctx,
@@ -51,7 +57,7 @@ func (c *Connection) Close() error {
 	return c.c.Close()
 }
 
-func (c *Connection) List() ([]types.Container, error) {
+func (c *Connection) List() ([]container.Summary, error) {
 	all, err := c.c.ContainerList(c.ctx, container.ListOptions{
 		All:     true,
 		Filters: filters.NewArgs(filters.Arg("label", label.Project)),
@@ -59,32 +65,38 @@ func (c *Connection) List() ([]types.Container, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	usr, err := user.Current()
 	if err != nil {
 		return nil, err
 	}
-	filtered := make([]types.Container, 0, len(all))
+
+	filtered := make([]container.Summary, 0, len(all))
 	for _, container := range all {
 		cUser := container.Labels[label.User]
 		if cUser == usr.Username {
 			filtered = append(filtered, container)
 		}
 	}
+
 	return filtered, nil
 }
 
-func (c *Connection) GetContainer(name string) (*types.ContainerJSON, error) {
+func (c *Connection) GetContainer(name string) (*container.InspectResponse, error) {
 	container, err := c.c.ContainerInspect(c.ctx, name)
-	if client.IsErrNotFound(err) {
+	if errdefs.IsNotFound(err) {
 		return nil, nil
 	}
+
 	usr, err := user.Current()
 	if err != nil {
 		return nil, err
 	}
+
 	if container.Config != nil && container.Config.Labels[label.User] != usr.Username {
 		return nil, nil
 	}
+
 	return &container, err
 }
 
@@ -110,22 +122,28 @@ func (c *Connection) calcWorkdir(id, user, workdir string, crate *config.Crate) 
 	if strings.HasPrefix(workdir, "/") {
 		return workdir, nil
 	}
+
 	parts := strings.SplitN(workdir, ",", 2)
 	workdir = strings.TrimSpace(parts[0])
+
 	wd, err := c.calcWorkdirSingle(id, user, workdir, crate)
 	if err == nil {
 		return wd, nil
 	}
+
 	log.Printf("Calculate Working Dir: '%s' failed: %s", workdir, err)
+
 	next := strings.TrimSpace(parts[1])
 	if next == "" {
 		return "", err
 	}
+
 	return c.calcWorkdir(id, user, next, crate)
 }
 
 func (c *Connection) calcWorkdirSingle(id, user, workdir string, crate *config.Crate) (string, error) {
 	log.Printf("Calculate Working Dir: id=%s user=%s workdir=%s", id, user, workdir)
+
 	switch workdir {
 	case "", "match":
 		return os.Getwd()
@@ -163,6 +181,7 @@ func (c *Connection) calcWorkdirSingle(id, user, workdir string, crate *config.C
 		}
 		return string(bytes.TrimSpace(stdout.Bytes())), nil
 	}
+
 	return "", fmt.Errorf("invalid working-dir: '%s'", workdir)
 }
 
@@ -192,20 +211,22 @@ func (c *Connection) Info() (system.Info, error) {
 }
 
 func (c *Connection) ImageLabels(name string) (map[string]string, error) {
-	info, _, err := c.c.ImageInspectWithRaw(c.ctx, name)
+	info, err := c.c.ImageInspect(c.ctx, name)
 	if err != nil {
-		if client.IsErrNotFound(err) {
+		if errdefs.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, err
 	}
+
 	log.Printf("IMAGE LABELS (%s): %#v", name, info.Config.Labels)
+
 	return info.Config.Labels, nil
 }
 
-func (c *Connection) GetImage(name string) (*types.ImageInspect, error) {
-	info, _, err := c.c.ImageInspectWithRaw(c.ctx, name)
-	if client.IsErrNotFound(err) {
+func (c *Connection) GetImage(name string) (*image.InspectResponse, error) {
+	info, err := c.c.ImageInspect(c.ctx, name)
+	if errdefs.IsNotFound(err) {
 		return nil, nil
 	}
 	return &info, err

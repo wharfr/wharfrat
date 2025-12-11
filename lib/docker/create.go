@@ -12,20 +12,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/containerd/errdefs"
+	"github.com/distribution/reference"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/go-connections/nat"
+
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
+
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker/label"
 	"wharfr.at/wharfrat/lib/self"
 	"wharfr.at/wharfrat/lib/vc"
 	"wharfr.at/wharfrat/lib/version"
-
-	"github.com/docker/distribution/reference"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
-
-	specs "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type CreatedFunc func(c *Connection, id string, crate *config.Crate)
@@ -223,7 +222,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 	log.Printf("IMAGE: %s %s %s", config.Image, namedRef, reference.FamiliarString(namedRef))
 
 	create, err := c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, platform, crate.ContainerName())
-	if client.IsErrNotFound(err) && namedRef != nil {
+	if errdefs.IsNotFound(err) && namedRef != nil {
 		fmt.Fprintf(os.Stderr, "Unable to find image '%s' locally\n", reference.FamiliarString(namedRef))
 
 		if err := c.pullImage(config.Image); err != nil {
@@ -249,7 +248,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	log.Printf("CREATE COMPLETE: %s", cid)
 
-	if err := c.c.CopyToContainer(c.ctx, cid, "/", selfTar, types.CopyToContainerOptions{}); err != nil {
+	if err := c.c.CopyToContainer(c.ctx, cid, "/", selfTar, container.CopyToContainerOptions{}); err != nil {
 		return "", err
 	}
 

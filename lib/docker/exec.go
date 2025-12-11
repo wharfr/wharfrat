@@ -13,7 +13,6 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/pkg/stdcopy"
@@ -210,7 +209,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		return 0, err
 	}
 
-	config := types.ExecConfig{
+	config := container.ExecOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
@@ -233,7 +232,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 
 	log.Printf("EXEC: ID=%s", execID)
 
-	startCheck := types.ExecStartCheck{
+	startCheck := container.ExecAttachOptions{
 		Tty: config.Tty,
 	}
 	attach, err := c.c.ContainerExecAttach(c.ctx, execID, startCheck)
@@ -358,7 +357,7 @@ func (c *Connection) GetOutput(id string, cmd []string, crate *config.Crate, use
 		return nil, nil, err
 	}
 
-	config := types.ExecConfig{
+	config := container.ExecOptions{
 		AttachStdin:  false,
 		AttachStdout: true,
 		AttachStderr: true,
@@ -381,7 +380,7 @@ func (c *Connection) GetOutput(id string, cmd []string, crate *config.Crate, use
 
 	log.Printf("EXEC: ID=%s", execID)
 
-	startCheck := types.ExecStartCheck{}
+	startCheck := container.ExecAttachOptions{}
 	attach, err := c.c.ContainerExecAttach(c.ctx, execID, startCheck)
 	if err != nil {
 		return nil, nil, err
