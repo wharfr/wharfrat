@@ -49,7 +49,17 @@ echo -e "${c}insert version info PKGBUILD file ...${r}"
 sed -e "s#@@VERSION@@#$combined#" PKGBUILD > wr.PKGBUILD
 
 echo -e "${c}build arch package ...${r}"
-"${plat_dist}/wr" --auto-clean -c arch makepkg -fp "/wharfrat/package/wr.PKGBUILD"
+if [[ -n "$WHARFRAT_SIGN_KEY" ]]; then
+    makepkg_args+=("--sign")
+    rm *.gpg || true
+    touch wharfrat-secret.gpg
+    chmod 600 wharfrat-secret.gpg
+    gpg --armor --export "$WHARFRAT_SIGN_KEY" > wharfrat-public.gpg
+    gpg --armor --export-secret-key "$WHARFRAT_SIGN_KEY" >> wharfrat-secret.gpg
+    export GPGKEY="$WHARFRAT_SIGN_KEY"
+    "${plat_dist}/wr" --auto-clean -c arch gpg --import wharfrat-secret.gpg
+fi
+"${plat_dist}/wr" --auto-clean -c arch makepkg "${makepkg_args[@]}" -fp "/wharfrat/package/wr.PKGBUILD"
 
 echo -e "${c}cleanup ...${r}"
 rm tmp.spec

@@ -6,4 +6,6 @@
 /wr.PKGBUILD
 /pkg/
 /*.zst
+/*.sig
+/*.gpg
 /wharfrat_*.tgz
