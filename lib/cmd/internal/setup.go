@@ -21,27 +21,8 @@ type Setup struct {
 	MkHome bool     `short:"h" long:"mkhome"`
 }
 
-func (s *Setup) create_group(entry string) error {
-	parts := strings.SplitN(entry, "=", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("'%s' did not match NAME=ID", entry)
-	}
-
-	args := []string{
-		"--force", "--gid", parts[1], parts[0],
-	}
-
-	log.Printf("groupadd args: %#v", args)
-
-	cmd := exec.Command("/usr/sbin/groupadd", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	return cmd.Run()
-}
-
-func (opts *Setup) setup_group_busybox() error {
-	check := exec.Command("/usr/bin/getent", "group", opts.Group)
+func addGroupBusybox(name, id string) error {
+	check := exec.Command("/usr/bin/getent", "group", name)
 	switch err := check.Run(); err.(type) {
 	case nil:
 		return nil
@@ -54,9 +35,9 @@ func (opts *Setup) setup_group_busybox() error {
 
 	args := []string{}
 
-	if opts.Gid != "0" {
+	if id != "0" {
 		exitErr := &exec.ExitError{}
-		existing := exec.Command("/usr/bin/getent", "group", opts.Gid)
+		existing := exec.Command("/usr/bin/getent", "group", id)
 		switch out, err := existing.Output(); true {
 		case err == nil:
 			// group already exists with the group id, delete it?
@@ -70,10 +51,10 @@ func (opts *Setup) setup_group_busybox() error {
 		default:
 			return err
 		}
-		args = append(args, "-g", opts.Gid)
+		args = append(args, "-g", id)
 	}
 
-	args = append(args, opts.Group)
+	args = append(args, name)
 
 	log.Printf("busybox addgroup args: %#v", args)
 
@@ -84,16 +65,16 @@ func (opts *Setup) setup_group_busybox() error {
 	return cmd.Run()
 }
 
-func (opts *Setup) setup_group_shadow() error {
+func addGroupShadow(name, id string) error {
 	args := []string{
 		"--force",
 	}
 
-	if opts.Gid != "0" {
-		args = append(args, "--gid", opts.Gid)
+	if id != "0" {
+		args = append(args, "--gid", id)
 	}
 
-	args = append(args, opts.Group)
+	args = append(args, name)
 
 	log.Printf("groupadd args: %#v", args)
 
@@ -104,15 +85,24 @@ func (opts *Setup) setup_group_shadow() error {
 	return cmd.Run()
 }
 
-func (opts *Setup) setup_group() error {
+func addGroup(name, id string) error {
 	if path, err := os.Readlink("/usr/sbin/addgroup"); err == nil && strings.HasSuffix(path, "busybox") {
-		return opts.setup_group_busybox()
+		return addGroupBusybox(name, id)
 	} else {
-		return opts.setup_group_shadow()
+		return addGroupShadow(name, id)
 	}
 }
 
-func (opts *Setup) setup_user_busybox() error {
+func (s *Setup) createGroup(entry string) error {
+	name, id, found := strings.Cut(entry, "=")
+	if !found {
+		return fmt.Errorf("'%s' did not match NAME=ID", entry)
+	}
+
+	return addGroup(name, id)
+}
+
+func (opts *Setup) setupUserBusybox() error {
 	args := []string{"-D"}
 
 	if !opts.MkHome {
@@ -144,7 +134,7 @@ func (opts *Setup) setup_user_busybox() error {
 	return cmd.Run()
 }
 
-func (opts *Setup) setup_user_shadow() error {
+func (opts *Setup) setupUserShadow() error {
 	args := []string{}
 
 	if opts.MkHome {
@@ -182,11 +172,11 @@ func (opts *Setup) setup_user_shadow() error {
 	return cmd.Run()
 }
 
-func (opts *Setup) setup_user() error {
+func (opts *Setup) setupUser() error {
 	if path, err := os.Readlink("/usr/sbin/adduser"); err == nil && strings.HasSuffix(path, "busybox") {
-		return opts.setup_user_busybox()
+		return opts.setupUserBusybox()
 	} else {
-		return opts.setup_user_shadow()
+		return opts.setupUserShadow()
 	}
 }
 
@@ -194,19 +184,19 @@ func (s *Setup) Execute(args []string) error {
 	log.Printf("Setup Args: %#v, Opts: %#v", args, s)
 
 	for _, entry := range s.Create {
-		if err := s.create_group(entry); err != nil {
+		if err := s.createGroup(entry); err != nil {
 			return fmt.Errorf("failed to create group: %w", err)
 		}
 	}
 
 	if s.Group != "" {
-		if err := s.setup_group(); err != nil {
+		if err := addGroup(s.Group, s.Gid); err != nil {
 			return fmt.Errorf("failed to setup group: %w", err)
 		}
 	}
 
 	if s.User != "" {
-		if err := s.setup_user(); err != nil {
+		if err := s.setupUser(); err != nil {
 			return fmt.Errorf("failed to setup user: %w", err)
 		}
 	}
