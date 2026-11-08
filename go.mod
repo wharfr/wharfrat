@@ -1,24 +1,24 @@
 module wharfr.at/wharfrat
 
-go 1.25.0
+go 1.26.0
 
 require (
-	github.com/BurntSushi/toml v1.5.0
+	github.com/BurntSushi/toml v1.6.0
 	github.com/containerd/errdefs v1.0.0
 	github.com/distribution/reference v0.6.0
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/docker/go-connections v0.6.0
+	github.com/docker/go-connections v0.8.2
 	github.com/jessevdk/go-flags v1.6.1
-	github.com/mattn/go-shellwords v1.0.12
+	github.com/mattn/go-shellwords v1.0.16
 	github.com/moby/term v0.5.2
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.49.0
 )
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
-	github.com/Microsoft/go-winio v0.4.21 // indirect
+	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -51,6 +51,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.45.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.45.0 // indirect
 	go.opentelemetry.io/otel/trace v1.45.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
