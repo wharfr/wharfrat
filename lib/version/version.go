@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/docker/docker/api"
+	"github.com/moby/moby/client"
 )
 
 var versionString = "eyJ2ZXJzaW9uIjoidjAuMTQuMS1kZXYiLCJjb21taXQiOiI1YTBhOWJiOTMyMzlmOGRhY2NkODgxOWNlZjgwNzgwN2MwOGFkMzM5IiwiYnVpbGR0aW1lIjoiMjAyNS0xMi0xMlQwMjowMzoyNFoifQo="
@@ -23,7 +23,8 @@ var version versionInfo
 func ShowVersion() error {
 	fmt.Printf("Version: %s\n", version.Version)
 	fmt.Printf("Git Commit: %s\n", version.Commit)
-	fmt.Printf("Docker API Version: %s\n", api.DefaultVersion)
+	fmt.Printf("Docker Max API Version: %s\n", client.MaxAPIVersion)
+	fmt.Printf("Docker Min API Version: %s\n", client.MinAPIVersion)
 	fmt.Printf("Go Version: %s\n", runtime.Version())
 	fmt.Printf("Built: %s\n", version.BuildTime.Local())
 	return nil

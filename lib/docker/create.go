@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"net/netip"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -14,9 +15,10 @@ import (
 
 	"github.com/containerd/errdefs"
 	"github.com/distribution/reference"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 
@@ -108,11 +110,47 @@ func getSelf() (*bytes.Buffer, error) {
 	return buf, nil
 }
 
+func parsePortSpecs(ports []string) (network.PortSet, network.PortMap, error) {
+	natPorts, natBindings, err := nat.ParsePortSpecs(ports)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	portSet := network.PortSet{}
+	for port := range natPorts {
+		p, err := network.ParsePort(string(port))
+		if err != nil {
+			return nil, nil, err
+		}
+		portSet[p] = struct{}{}
+	}
+
+	portMap := network.PortMap{}
+	for port, bindings := range natBindings {
+		p, err := network.ParsePort(string(port))
+		if err != nil {
+			return nil, nil, err
+		}
+		portMap[p] = []network.PortBinding{}
+		for _, b := range bindings {
+			binding := network.PortBinding{
+				HostPort: b.HostPort,
+			}
+			if b.HostIP != "" {
+				hostIP, err := netip.ParseAddr(b.HostIP)
+				if err != nil {
+					return nil, nil, err
+				}
+				binding.HostIP = hostIP
+			}
+			portMap[p] = append(portMap[p], binding)
+		}
+	}
+
+	return portSet, portMap, nil
+}
+
 func (c *Connection) Create(crate *config.Crate) (string, error) {
-	// self, err := os.Readlink("/proc/self/exe")
-	// if err != nil {
-	// 	return "", fmt.Errorf("Failed to get self: %s", err)
-	// }
 	selfTar, err := getSelf()
 	if err != nil {
 		return "", fmt.Errorf("failed to get self: %w", err)
@@ -138,7 +176,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		labels[label.Branch] = branch
 	}
 
-	exposed, ports, err := nat.ParsePortSpecs(crate.Ports)
+	exposed, ports, err := parsePortSpecs(crate.Ports)
 	if err != nil {
 		return "", err
 	}
@@ -195,7 +233,7 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		Tmpfs:        tmpfs,
 		CapAdd:       crate.CapAdd,
 		CapDrop:      crate.CapDrop,
-		DNS:          []string{},
+		DNS:          []netip.Addr{},
 		DNSSearch:    []string{},
 		DNSOptions:   []string{},
 		NetworkMode:  container.NetworkMode(crate.Network),
@@ -221,7 +259,13 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	log.Printf("IMAGE: %s %s %s", config.Image, namedRef, reference.FamiliarString(namedRef))
 
-	create, err := c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, platform, crate.ContainerName())
+	create, err := c.c.ContainerCreate(c.ctx, client.ContainerCreateOptions{
+		Config:           config,
+		HostConfig:       hostConfig,
+		NetworkingConfig: networkingConfig,
+		Platform:         platform,
+		Name:             crate.ContainerName(),
+	})
 	if errdefs.IsNotFound(err) && namedRef != nil {
 		fmt.Fprintf(os.Stderr, "Unable to find image '%s' locally\n", reference.FamiliarString(namedRef))
 
@@ -237,7 +281,13 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 		labels[label.Config] = crate.Json()
 
 		var retryErr error
-		create, retryErr = c.c.ContainerCreate(c.ctx, config, hostConfig, networkingConfig, platform, crate.ContainerName())
+		create, retryErr = c.c.ContainerCreate(c.ctx, client.ContainerCreateOptions{
+			Config:           config,
+			HostConfig:       hostConfig,
+			NetworkingConfig: networkingConfig,
+			Platform:         platform,
+			Name:             crate.ContainerName(),
+		})
 		if retryErr != nil {
 			return "", retryErr
 		}
@@ -248,13 +298,16 @@ func (c *Connection) Create(crate *config.Crate) (string, error) {
 
 	log.Printf("CREATE COMPLETE: %s", cid)
 
-	if err := c.c.CopyToContainer(c.ctx, cid, "/", selfTar, container.CopyToContainerOptions{}); err != nil {
+	if _, err := c.c.CopyToContainer(c.ctx, cid, client.CopyToContainerOptions{
+		DestinationPath: "/",
+		Content:         selfTar,
+	}); err != nil {
 		return "", err
 	}
 
 	log.Printf("SELF COPIED: %s", cid)
 
-	if err := c.c.ContainerStart(c.ctx, cid, container.StartOptions{}); err != nil {
+	if _, err := c.c.ContainerStart(c.ctx, cid, client.ContainerStartOptions{}); err != nil {
 		return "", err
 	}
 

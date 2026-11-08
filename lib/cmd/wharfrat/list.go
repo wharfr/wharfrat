@@ -199,7 +199,7 @@ func (l *List) Execute(args []string) error {
 			project: strState{project, projectState},
 			crate:   strState{crateName, crateState},
 			image:   container.Image,
-			state:   container.State,
+			state:   string(container.State),
 			branch:  strState{branch, branchState},
 		})
 	}

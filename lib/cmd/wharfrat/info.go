@@ -53,15 +53,15 @@ func (i *Info) Execute(args []string) error {
 			v4 := network.IPAddress
 			v6 := network.GlobalIPv6Address
 
-			addr = v4
-			if v4 != "" && v6 != "" {
-				addr = v4 + ", " + v6
-			} else if v6 != "" {
-				addr = v6
+			addr = v4.String()
+			if v4.IsValid() && v6.IsValid() {
+				addr = v4.String() + ", " + v6.String()
+			} else if v6.IsValid() {
+				addr = v6.String()
 			}
 		}
 
-		status = container.State.Status
+		status = string(container.State.Status)
 	}
 
 	fmt.Printf("Project Folder:   %s\n", project)
