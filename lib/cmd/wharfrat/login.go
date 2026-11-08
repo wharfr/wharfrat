@@ -9,7 +9,6 @@ import (
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker"
 
-	"github.com/docker/docker/registry"
 	"github.com/moby/term"
 )
 
@@ -57,14 +56,8 @@ func (l *Login) Execute(args []string) error {
 	server := l.Args.Server
 
 	if server == "" {
-		info, err := client.Info()
-		if err != nil {
-			return err
-		}
-		server = info.IndexServerAddress
+		server = "docker.io"
 	}
-
-	server = registry.ConvertToHostname(server)
 
 	log.Printf("LOGIN: %s", server)
 

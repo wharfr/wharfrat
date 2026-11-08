@@ -11,12 +11,11 @@ import (
 	"strings"
 
 	"github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/registry"
-	"github.com/docker/docker/api/types/system"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/registry"
+	"github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/client"
 
 	"wharfr.at/wharfrat/lib/config"
 	"wharfr.at/wharfrat/lib/docker/label"
@@ -35,17 +34,12 @@ func Connect() (*Connection, error) {
 		opts = append(opts, client.WithHost(host))
 	}
 
-	c, err := client.NewClientWithOpts(opts...)
+	c, err := client.New(opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	ctx := context.Background()
-	before := c.ClientVersion()
-	c.NegotiateAPIVersion(ctx)
-	after := c.ClientVersion()
-
-	log.Printf("API: before: %s, after: %s", before, after)
 
 	return &Connection{
 		c:   c,
@@ -58,9 +52,9 @@ func (c *Connection) Close() error {
 }
 
 func (c *Connection) List() ([]container.Summary, error) {
-	all, err := c.c.ContainerList(c.ctx, container.ListOptions{
+	all, err := c.c.ContainerList(c.ctx, client.ContainerListOptions{
 		All:     true,
-		Filters: filters.NewArgs(filters.Arg("label", label.Project)),
+		Filters: make(client.Filters).Add("label", label.Project),
 	})
 	if err != nil {
 		return nil, err
@@ -71,8 +65,8 @@ func (c *Connection) List() ([]container.Summary, error) {
 		return nil, err
 	}
 
-	filtered := make([]container.Summary, 0, len(all))
-	for _, container := range all {
+	filtered := make([]container.Summary, 0, len(all.Items))
+	for _, container := range all.Items {
 		cUser := container.Labels[label.User]
 		if cUser == usr.Username {
 			filtered = append(filtered, container)
@@ -83,7 +77,7 @@ func (c *Connection) List() ([]container.Summary, error) {
 }
 
 func (c *Connection) GetContainer(name string) (*container.InspectResponse, error) {
-	container, err := c.c.ContainerInspect(c.ctx, name)
+	resp, err := c.c.ContainerInspect(c.ctx, name, client.ContainerInspectOptions{})
 	if errdefs.IsNotFound(err) {
 		return nil, nil
 	}
@@ -93,6 +87,8 @@ func (c *Connection) GetContainer(name string) (*container.InspectResponse, erro
 		return nil, err
 	}
 
+	container := resp.Container
+
 	if container.Config != nil && container.Config.Labels[label.User] != usr.Username {
 		return nil, nil
 	}
@@ -101,21 +97,25 @@ func (c *Connection) GetContainer(name string) (*container.InspectResponse, erro
 }
 
 func (c *Connection) Start(id string) error {
-	return c.c.ContainerStart(c.ctx, id, container.StartOptions{})
+	_, err := c.c.ContainerStart(c.ctx, id, client.ContainerStartOptions{})
+	return err
 }
 
 func (c *Connection) Unpause(id string) error {
-	return c.c.ContainerUnpause(c.ctx, id)
+	_, err := c.c.ContainerUnpause(c.ctx, id, client.ContainerUnpauseOptions{})
+	return err
 }
 
 func (c *Connection) Stop(id string) error {
-	return c.c.ContainerStop(c.ctx, id, container.StopOptions{})
+	_, err := c.c.ContainerStop(c.ctx, id, client.ContainerStopOptions{})
+	return err
 }
 
 func (c *Connection) Remove(id string, force bool) error {
-	return c.c.ContainerRemove(c.ctx, id, container.RemoveOptions{
+	_, err := c.c.ContainerRemove(c.ctx, id, client.ContainerRemoveOptions{
 		Force: force,
 	})
+	return err
 }
 
 func (c *Connection) calcWorkdir(id, user, workdir string, crate *config.Crate) (string, error) {
@@ -192,22 +192,29 @@ func (c *Connection) Login(addr, user, pass string) (*registry.AuthConfig, error
 		Password:      pass,
 	}
 
-	resp, err := c.c.RegistryLogin(c.ctx, authConfig)
+	resp, err := c.c.RegistryLogin(c.ctx, client.RegistryLoginOptions{
+		Username:      authConfig.Username,
+		Password:      authConfig.Password,
+		ServerAddress: authConfig.ServerAddress,
+		IdentityToken: authConfig.IdentityToken,
+		RegistryToken: authConfig.RegistryToken,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("LOGIN: token=%s, status=%s", resp.IdentityToken, resp.Status)
+	log.Printf("LOGIN: token=%s, status=%s", resp.Auth.IdentityToken, resp.Auth.Status)
 
-	if resp.Status != "" {
-		fmt.Println(resp.Status)
+	if resp.Auth.Status != "" {
+		fmt.Println(resp.Auth.Status)
 	}
 
 	return &authConfig, nil
 }
 
 func (c *Connection) Info() (system.Info, error) {
-	return c.c.Info(c.ctx)
+	resp, err := c.c.Info(c.ctx, client.InfoOptions{})
+	return resp.Info, err
 }
 
 func (c *Connection) ImageLabels(name string) (map[string]string, error) {
@@ -229,5 +236,5 @@ func (c *Connection) GetImage(name string) (*image.InspectResponse, error) {
 	if errdefs.IsNotFound(err) {
 		return nil, nil
 	}
-	return &info, err
+	return &info.InspectResponse, err
 }

@@ -7,10 +7,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/docker/docker/api"
+	"github.com/moby/moby/client"
 )
 
-var versionString = "eyJ2ZXJzaW9uIjoidjAuMTQuMSIsImNvbW1pdCI6ImFlODQwZDk1NDU2ZWU3Zjc4YjNhZjExNjA5Y2U5NDJhYWVjZmUyMzQiLCJidWlsZHRpbWUiOiIyMDI1LTEyLTEyVDAyOjAzOjI0WiJ9Cg=="
+var versionString = "eyJ2ZXJzaW9uIjoidjAuMTUuMCIsImNvbW1pdCI6ImUzZmFiMGFhNWY3Y2ZkZTkwMjdlYmI2NzYyOTNiM2Y5M2U3MGZhNDQiLCJidWlsZHRpbWUiOiIyMDI2LTExLTA4VDE1OjQ0OjUxWiJ9Cg=="
 
 type versionInfo struct {
 	Version   string
@@ -23,7 +23,8 @@ var version versionInfo
 func ShowVersion() error {
 	fmt.Printf("Version: %s\n", version.Version)
 	fmt.Printf("Git Commit: %s\n", version.Commit)
-	fmt.Printf("Docker API Version: %s\n", api.DefaultVersion)
+	fmt.Printf("Docker Max API Version: %s\n", client.MaxAPIVersion)
+	fmt.Printf("Docker Min API Version: %s\n", client.MinAPIVersion)
 	fmt.Printf("Go Version: %s\n", runtime.Version())
 	fmt.Printf("Built: %s\n", version.BuildTime.Local())
 	return nil

@@ -13,9 +13,9 @@ import (
 
 	"wharfr.at/wharfrat/lib/config"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/versions"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/versions"
 	"github.com/moby/term"
 )
 
@@ -152,12 +152,12 @@ func rewrite(cmd string, out io.Writer, id string, crate *config.Crate) io.Write
 }
 
 func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user, workdir string) (int, error) {
-	ctr, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
+	ctr, err := c.c.ContainerInspect(c.ctx, crate.ContainerName(), client.ContainerInspectOptions{})
 	if err != nil {
 		return -1, err
 	}
 
-	cmds := []string(ctr.Config.Entrypoint)
+	cmds := []string(ctr.Container.Config.Entrypoint)
 	cmds = append(cmds, cmd...)
 
 	log.Printf("CMD: %v", cmds)
@@ -209,18 +209,18 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		return 0, err
 	}
 
-	config := container.ExecOptions{
+	config := client.ExecCreateOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
-		Tty:          tty,
+		TTY:          tty,
 		Cmd:          cmds,
 		Env:          env,
 		User:         user,
 		WorkingDir:   workdir,
 	}
 
-	resp, err := c.c.ContainerExecCreate(c.ctx, id, config)
+	resp, err := c.c.ExecCreate(c.ctx, id, config)
 	if err != nil {
 		return -1, err
 	}
@@ -232,10 +232,10 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 
 	log.Printf("EXEC: ID=%s", execID)
 
-	startCheck := container.ExecAttachOptions{
-		Tty: config.Tty,
+	startCheck := client.ExecAttachOptions{
+		TTY: config.TTY,
 	}
-	attach, err := c.c.ContainerExecAttach(c.ctx, execID, startCheck)
+	attach, err := c.c.ExecAttach(c.ctx, execID, startCheck)
 	if err != nil {
 		return -1, err
 	}
@@ -245,14 +245,14 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 
 	stdout := rewrite(cmd[0], os.Stdout, id, crate)
 
-	if config.Tty {
+	if config.TTY {
 		resizeTty := func() error {
 			size, err := term.GetWinsize(inFd)
 			log.Printf("Resize: size=%v err=%s id=%s", size, err, execID)
 			if err != nil {
 				return err
 			}
-			err = c.c.ContainerExecResize(c.ctx, execID, container.ResizeOptions{
+			_, err = c.c.ExecResize(c.ctx, execID, client.ExecResizeOptions{
 				Height: uint(size.Height),
 				Width:  uint(size.Width),
 			})
@@ -328,7 +328,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 		return -1, fmt.Errorf("error copying output: %w", err)
 	}
 
-	inspect, err := c.c.ContainerExecInspect(c.ctx, execID)
+	inspect, err := c.c.ExecInspect(c.ctx, execID, client.ExecInspectOptions{})
 	if err != nil {
 		return -1, fmt.Errorf("failed to get exec response: %w", err)
 	}
@@ -341,7 +341,7 @@ func (c *Connection) ExecCmd(id string, cmd []string, crate *config.Crate, user,
 }
 
 func (c *Connection) GetOutput(id string, cmd []string, crate *config.Crate, user string) ([]byte, []byte, error) {
-	_, err := c.c.ContainerInspect(c.ctx, crate.ContainerName())
+	_, err := c.c.ContainerInspect(c.ctx, crate.ContainerName(), client.ContainerInspectOptions{})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -357,18 +357,18 @@ func (c *Connection) GetOutput(id string, cmd []string, crate *config.Crate, use
 		return nil, nil, err
 	}
 
-	config := container.ExecOptions{
+	config := client.ExecCreateOptions{
 		AttachStdin:  false,
 		AttachStdout: true,
 		AttachStderr: true,
-		Tty:          false,
+		TTY:          false,
 		Cmd:          cmd,
 		Env:          env,
 		User:         user,
 		WorkingDir:   "/",
 	}
 
-	resp, err := c.c.ContainerExecCreate(c.ctx, id, config)
+	resp, err := c.c.ExecCreate(c.ctx, id, config)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -380,8 +380,7 @@ func (c *Connection) GetOutput(id string, cmd []string, crate *config.Crate, use
 
 	log.Printf("EXEC: ID=%s", execID)
 
-	startCheck := container.ExecAttachOptions{}
-	attach, err := c.c.ContainerExecAttach(c.ctx, execID, startCheck)
+	attach, err := c.c.ExecAttach(c.ctx, execID, client.ExecAttachOptions{})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -402,7 +401,7 @@ func (c *Connection) GetOutput(id string, cmd []string, crate *config.Crate, use
 		return nil, nil, fmt.Errorf("error copying output: %w", err)
 	}
 
-	inspect, err := c.c.ContainerExecInspect(c.ctx, execID)
+	inspect, err := c.c.ExecInspect(c.ctx, execID, client.ExecInspectOptions{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get exec response: %w", err)
 	}
