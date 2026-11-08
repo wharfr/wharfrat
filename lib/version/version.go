@@ -10,7 +10,7 @@ import (
 	"github.com/moby/moby/client"
 )
 
-var versionString = "eyJ2ZXJzaW9uIjoidjAuMTQuMS1kZXYiLCJjb21taXQiOiI1YTBhOWJiOTMyMzlmOGRhY2NkODgxOWNlZjgwNzgwN2MwOGFkMzM5IiwiYnVpbGR0aW1lIjoiMjAyNS0xMi0xMlQwMjowMzoyNFoifQo="
+var versionString = "eyJ2ZXJzaW9uIjoidjAuMTUuMCIsImNvbW1pdCI6ImUzZmFiMGFhNWY3Y2ZkZTkwMjdlYmI2NzYyOTNiM2Y5M2U3MGZhNDQiLCJidWlsZHRpbWUiOiIyMDI2LTExLTA4VDE1OjQ0OjUxWiJ9Cg=="
 
 type versionInfo struct {
 	Version   string
