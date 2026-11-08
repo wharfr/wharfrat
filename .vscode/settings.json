@@ -17,5 +17,6 @@
         "wharfr",
         "workdir",
         "wrcrate"
-    ]
+    ],
+    "cmake.sourceDirectory": "/home/jp3/code/wharfrat/master/demo"
 }
